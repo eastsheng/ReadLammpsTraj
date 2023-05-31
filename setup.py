@@ -14,7 +14,7 @@ with open("requirements.txt","r") as f:
 
 setup(
 name         = 'ReadLammpsTraj',
-version      = '1.1.1',
+version      = '1.1.3',
 py_modules   = ['ReadLammpsTraj'],
 author       = 'CHENDONGSHENG',
 author_email = 'eastsheng@hotmail.com',

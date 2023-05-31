@@ -3,6 +3,10 @@ MANIFEST.in
 README.md
 requirements.txt
 setup.py
+demo/1000.lammpstrj
+demo/cal_density.py
+demo/__pycache__/ReadLammpsTraj.cpython-311.pyc
+demo/imgs/density.png
 src/ReadLammpsTraj.py
 src/ReadLammpsTraj.egg-info/PKG-INFO
 src/ReadLammpsTraj.egg-info/SOURCES.txt

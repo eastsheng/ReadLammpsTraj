@@ -3,6 +3,41 @@
 import numpy as np 
 import pandas as pd
 
+
+def read_mass(lammpsdata):
+	"""
+	read atomic mass from lammps data. 
+	"""
+	data = open(lammpsdata,"r")
+	lines = data.read()
+	mass = []
+	(header,mass_other)=lines.split("\n\nMasses\n\n")
+	try:
+		try:
+			try:
+				(mass,other)=mass_other.split("\n\nPair Coeffs ")
+			except:
+				(mass,other)=mass_other.split("\n\nBond Coeffs ")
+		except:
+			(mass,other)=mass_other.split("\n\nAngle Coeffs ")
+	except:
+		(mass,other)=mass_other.split("\n\nAtoms # ")
+
+	mass=list(mass.split('\n'))
+	mass = list(filter(None, mass))
+	mass_id,mass_sub = [], []
+	for i in range(len(mass)):
+		mass_uu = mass[i].strip(" ").split(" ")
+		mass_id.append(int(mass_uu[0]))
+		mass_sub.append(float(mass_uu[1]))
+
+	pairs = zip(mass_id,mass_sub)
+	mass_dict = {k: v for k, v in pairs}
+
+	return mass_dict
+
+
+
 class ReadLammpsTraj(object):
 	"""docstring for ClassName"""
 	def __init__(self,f,timestep=1):
@@ -74,7 +109,10 @@ class ReadLammpsTraj(object):
 		return  vol
 
 	def read_mxyz(self,nframe):
-		# 不区分分子类型，计算所有的密度所需
+		"""
+		read mass, and x, y, z coordinates of nth frame from traj...
+		nframe: number of frame 
+		"""
 		traj = self.read_traj(nframe)
 		try:
 			self.mol = traj.loc[:,"mol"].values.astype(np.int64)#id mol type
@@ -100,7 +138,10 @@ class ReadLammpsTraj(object):
 		return position
 
 	def read_traj(self,nframe):
-		# 读取所有数据
+		"""
+		read data of nth frame from traj...
+		nframe: number of frame 
+		"""
 		skip = 9*nframe+self.atom_n*(nframe-1)
 		traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.atom_n,dtype="str")
 		print("Labels in traj is:",self.col)
@@ -108,94 +149,140 @@ class ReadLammpsTraj(object):
 		print(traj)
 		return traj
 
-	def oneframe_alldensity(self,mxyz,Nz,density_type="mass"):
-		# 只计算一帧的密度
+	def oneframe_alldensity(self,mxyz,Nbin,mass_dict={},density_type="mass",direction="z"):
+		"""
+		calculating density of all atoms......
+		mxyz: array of mass, x, y, and z;
+		Nbin: number of bins in x/y/z-axis
+		mass_dict: masses of atoms ,default={} 
+		density_type: calculated type of density 
+		"""
+
 		unitconvert = self.amu2g*(self.A2CM)**3
-		dZ = self.Lz/Nz #z方向bin
+		if direction=="z" or direction=="Z":
+			dr = self.Lz/Nbin #z方向bin
+			L = mxyz[:,3]
+			lo = self.zlo
+			vlo = (self.Lx*self.Ly*dr)*unitconvert
+		elif direction=="y" or direction=="Y":
+			dr = self.Ly/Nbin
+			L = mxyz[:,2]
+			lo = self.ylo
+			vlo = (self.Lx*self.Lz*dr)*unitconvert
+		elif direction=="x" or direction=="X":
+			dr = self.Lx/Nbin
+			L = mxyz[:,1]
+			lo = self.xlo
+			vlo = (self.Ly*self.Lz*dr)*unitconvert
+
+		mass_key=list(mass_dict.keys())
+		for i in range(len(self.atom)):
+			for j in range(len(mass_key)):
+				if self.atom[i] == mass_key[j]:
+					mxyz[i,0] = mass_dict[mass_key[j]]
 		MW = mxyz[:,0] #相对分子质量
+
 		if np.all(MW==0):
 			density_type = "number"
 			print("\nNo provided mass, will calculate number density!\n")
 		else:
 			density_type = "mass"
 
-		Z = mxyz[:,3] #z
 		rho_n = [] #average density list in every bins
-		zc_n  = []
-		# print(MW.shape,Z.shape)
-		for n in range(Nz):
+		lc_n  = []
+		for n in range(Nbin):
 			mass_n=0 #tot mass in bin
-			z0 = self.zlo+dZ*n #down coord of bin
-			z1 = self.zlo+dZ*(n+1)#up coord of bin
-			zc = (z0+z1)*0.5
-			# print(z0,z1,zc)
+			l0 = lo+dr*n #down coord of bin
+			l1 = lo+dr*(n+1)#up coord of bin
+			lc = (l0+l1)*0.5
 			for i in range(self.atom_n):
-				# if i atom in [z0:z1] 
-				if Z[i]>=z0 and Z[i]<=z1:
+				if L[i]>=l0 and L[i]<=l1:
 					if density_type == "mass":
 						mass_n = MW[i]+mass_n
 					else:
 						mass_n = mass_n+1
-			# print(mass_n)
-			vlo = (self.Lx*self.Ly*dZ)*unitconvert
-			# print(vlo)
 			rho = mass_n/vlo
 			# print(rho)
 			rho_n.append(rho)
-			zc_n.append(zc)
-		zc_n = np.array(zc_n).reshape(-1,1)
+			lc_n.append(lc)
+		lc_n = np.array(lc_n).reshape(-1,1)
 		rho_n = np.array(rho_n).reshape(-1,1)
 
-		return zc_n,rho_n
+		return lc_n,rho_n
 
-	def oneframe_moldensity(self,mxyz,Nz,mol_n,id_type="mol",density_type="mass"):
-		# 只计算一帧的密度
+	def oneframe_moldensity(self,mxyz,Nbin,id_range,mass_dict={},id_type="mol",density_type="mass",direction="z"):
+		"""
+		calculating density of some molecules......
+		mxyz: array of mass, x, y, and z;
+		Nbin: number of bins in x/y/z-axis
+		id_range: range of molecule/atom id;
+		mass_dict: masses of atoms ,default={} 
+		id_type: according to the molecule/atom id, to recognize atoms, args: mol, atom
+		density_type: calculated type of density 
+		"""
 		unitconvert = self.amu2g*(self.A2CM)**3
-		dZ = self.Lz/Nz #z方向bin
+		if direction=="z" or direction=="Z":
+			dr = self.Lz/Nbin #z方向bin
+			L = mxyz[:,3]
+			lo = self.zlo
+			vlo = (self.Lx*self.Ly*dr)*unitconvert
+		elif direction=="y" or direction=="Y":
+			dr = self.Ly/Nbin
+			L = mxyz[:,2]
+			lo = self.ylo
+			vlo = (self.Lx*self.Lz*dr)*unitconvert
+		elif direction=="x" or direction=="X":
+			dr = self.Lx/Nbin
+			L = mxyz[:,1]
+			lo = self.xlo
+			vlo = (self.Ly*self.Lz*dr)*unitconvert
+
+		mass_key=list(mass_dict.keys())
+		for i in range(len(self.atom)):
+			for j in range(len(mass_key)):
+				if self.atom[i] == mass_key[j]:
+					mxyz[i,0] = mass_dict[mass_key[j]]
 		MW = mxyz[:,0] #相对分子质量
 		if np.all(MW==0):
 			density_type = "number"
 			print("\nNo provided mass, will calculate number density!\n")
 		else:
 			density_type = "mass"
-		Z = mxyz[:,3] #z
+
 		rho_n = [] #average density list in every bins
-		zc_n  = []
+		lc_n  = []
 		# print(MW.shape,Z.shape)
 		if id_type == "mol":
 			id_know = self.mol
 		elif id_type == "atom":
 			id_know = self.atom
-		for n in range(Nz):
+		for n in range(Nbin):
 			mass_n=0 #tot mass in bin
-			z0 = self.zlo+dZ*n #down coord of bin
-			z1 = self.zlo+dZ*(n+1)#up coord of bin
-			zc = (z0+z1)*0.5
+			l0 = lo+dr*n #down coord of bin
+			l1 = lo+dr*(n+1)#up coord of bin
+			lc = (l0+l1)*0.5
 			# print(z0,z1,zc)
 			for i in range(self.atom_n):
-				if id_know[i]>=mol_n[0] and id_know[i]<=mol_n[1]:
+				if id_know[i]>=id_range[0] and id_know[i]<=id_range[1]:
 					# if i atom in [z0:z1]
-					if Z[i]>=z0 and Z[i]<=z1:
+					if L[i]>=l0 and L[i]<=l1:
 						if density_type == "mass":
 							mass_n = MW[i]+mass_n
 						else:
 							mass_n = mass_n+1
-			# print(mass_n)
-			vlo = (self.Lx*self.Ly*dZ)*unitconvert
-			# print(vlo)
 			rho = mass_n/vlo
 			# print(rho)
 			rho_n.append(rho)
-			zc_n.append(zc)
-		zc_n = np.array(zc_n).reshape(-1,1)
+			lc_n.append(lc)
+		lc_n = np.array(lc_n).reshape(-1,1)
 		rho_n = np.array(rho_n).reshape(-1,1)	
-		return zc_n,rho_n
+		return lc_n,rho_n
 
-	def TwoD_Density(self,mxyz,mol_n,Nx=1,Ny=1,Nz=1,mass_or_number="mass"):
+	def TwoD_Density(self,mxyz,id_range,Nx=1,Ny=1,Nz=1,mass_or_number="mass"):
 		'''
 		mxyz: mass x y z
 		atom_n: tot number of atoms
-		mol_n: type of molecules,list,mol_n=[1,36], the 1 is the first mol type and 36 is the last one mol type
+		id_range: type of molecules,list,id_range=[1,36], the 1 is the first mol type and 36 is the last one mol type
 		Nx,Ny,Nz: layer number of x , y, z for calculating density, which is relate to the precision of density,
 		and default is 1, that is, the total density.
 		mass_or_number: "mass: mass density; number: number density"
@@ -233,7 +320,7 @@ class ReadLammpsTraj(object):
 
 					for i in range(self.atom_n):
 						
-						if self.mol[i]>=mol_n[0] and self.mol[i]<=mol_n[1]:
+						if self.mol[i]>=id_range[0] and self.mol[i]<=id_range[1]:
 							if X[i]>=x0 and X[i]<=x1 and Y[i]>=y0 and Y[i]<=y1 and Z[i]>=z0 and Z[i]<=z1:
 								if mass_or_number == "mass":
 									n = MW[i]+n
