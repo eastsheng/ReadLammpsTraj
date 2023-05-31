@@ -3,11 +3,21 @@
 
 ### Installation
 
-```bash
-git clone https://github.com/eastsheng/ReadLammpsTraj
-cd ReadLammpsTraj
-pip install .
-```
+- github:
+
+  ```bash
+  git clone https://github.com/eastsheng/ReadLammpsTraj
+  cd ReadLammpsTraj
+  pip install .
+  ```
+
+- pip
+
+  ```
+  pip install ReadLammpsTraj
+  ```
+
+  
 
 ### Usage
 
@@ -15,17 +25,17 @@ pip install .
 
   ```python
   # calculating the density from lammps traj
-  # id mol type mass x y z vx vy vz fx fy fz q
   import numpy as np
   import matplotlib.pyplot as plt
   import ReadLammpsTraj as RLT
   from pathlib import Path
+  import periodictable as pt
   
   def cal_density():
   	path = "./"
   	f = "1000.lammpstrj"
-  
-  	Path(path+"density/").mkdir(parents=True,exist_ok=True)
+  	# lammpsdata = "1_npt_dissociation.data"
+  	Path(path+"imgs/").mkdir(parents=True,exist_ok=True)
   
   	md = RLT.ReadLammpsTraj(path+f)
   	md.read_info()
@@ -33,8 +43,16 @@ pip install .
   	mframe,nframe = 1, 1
   	# # chunk number in z
   	Nz = 100
-  	mol_n = [1,1000]
-  	# 分子序号
+  	id_range = [1,10000]
+  	# # element mass
+  	# O_mass = pt.elements.symbol('O').mass
+  	# H_mass = pt.elements.symbol('H').mass
+  	# C_mass = pt.elements.symbol('C').mass
+  	# mass_dict = {1:O_mass,2:H_mass,3:C_mass+4*H_mass,4:C_mass+4*H_mass}
+  	mass_dict = {}
+  	# mass_dict = RLT.read_mass(path+lammpsdata)
+  
+  	direction = "z"
   
   	Calculate = True #True#False
   
@@ -42,8 +60,8 @@ pip install .
   		rho_nframe = np.zeros(Nz).reshape(Nz,1)
   		for i in range(mframe,nframe+1):
   			position = md.read_mxyz(i)
-  			z, rho = md.oneframe_alldensity(position,Nz,density_type="mass")
-  			# z, rho = md.oneframe_moldensity(position,Nz,mol_n=mol_n,id_type="mol",density_type="mass")
+  			# z, rho = md.oneframe_alldensity(position,Nz,mass_dict,density_type="mass",direction=direction)
+  			z, rho = md.oneframe_moldensity(position,Nz,id_range,mass_dict,id_type="atom",density_type="mass",direction=direction)
   
   			rho_nframe = rho_nframe+rho
   
@@ -65,13 +83,13 @@ pip install .
   	ax.set_xlabel('z(Å)',fontweight='bold',size=32)	
   	# ax.set_ylim(-0.05,1.5)
   
-  	plt.savefig(path+"density/density.png",dpi=300)
+  	plt.savefig(path+"imgs/density.png",dpi=300)
   	plt.show()
   
   
   if __name__ == '__main__':
   	cal_density()
   ```
-
+  
   
 
