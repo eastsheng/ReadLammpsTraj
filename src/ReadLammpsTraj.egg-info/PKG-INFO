@@ -1,3 +1,13 @@
+Metadata-Version: 2.1
+Name: ReadLammpsTraj
+Version: 1.1.0
+Summary: Read lammps dump trajectory.
+Home-page: https://github.com/eastsheng/ReadLammpsTraj
+Author: CHENDONGSHENG
+Author-email: eastsheng@hotmail.com
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
 ## ReadLammpsTraj
 - Read lammps dump trajectory
 
@@ -34,7 +44,7 @@ pip install .
   	# # chunk number in z
   	Nz = 100
   	mol_n = [1,1000]
-  	# 分子序号
+  	# 鍒嗗瓙搴忓彿
   
   	Calculate = True #True#False
   
@@ -62,7 +72,7 @@ pip install .
   	ax.legend(loc="best")
   
   	ax.set_ylabel('Density(g/mL)',fontweight='bold',size=32)
-  	ax.set_xlabel('z(Å)',fontweight='bold',size=32)	
+  	ax.set_xlabel('z(脜)',fontweight='bold',size=32)	
   	# ax.set_ylim(-0.05,1.5)
   
   	plt.savefig(path+"density/density.png",dpi=300)

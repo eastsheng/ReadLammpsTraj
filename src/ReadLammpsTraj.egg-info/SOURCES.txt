@@ -1,0 +1,10 @@
+LICENSE
+MANIFEST.in
+README.md
+requirements.txt
+setup.py
+src/ReadLammpsTraj.py
+src/ReadLammpsTraj.egg-info/PKG-INFO
+src/ReadLammpsTraj.egg-info/SOURCES.txt
+src/ReadLammpsTraj.egg-info/dependency_links.txt
+src/ReadLammpsTraj.egg-info/top_level.txt
