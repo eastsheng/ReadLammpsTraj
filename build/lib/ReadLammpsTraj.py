@@ -3,6 +3,31 @@
 import numpy as np 
 import pandas as pd
 
+version = "1.1.5"
+
+def print_ReadLammpsTraj():
+    cloud = [
+			"______                   _    _       _____                 _ ",
+			"| ___ \                 | |  | |     |_   _|               (_)",
+			"| |_/ /  ___   __ _   __| |  | |       | |   _ __   __ _    _ ",
+			"|    /  / _ \ / _` | / _` |  | |       | |  | '__| / _` |  | |",
+			"| |\ \ |  __/| (_| || (_| |  | |____   | |  | |   | (_| |  | |",
+			"\_| \_| \___| \__,_| \__,_|  \_____/   \_/  |_|    \__,_|  | |",
+			"                                                          _/ |",
+			"                                                         |__/ ",
+    ]
+    n = 32
+    print("\n")
+    print(n*"- ")
+    print(n*". ")
+    for line in cloud:
+        print(line)
+    print('@ReadLammpsTraj-'+version,", Good Luck!")
+    print(n*". ")
+    print(n*"- ")
+    return None
+
+print_ReadLammpsTraj()
 
 def read_mass(lammpsdata):
 	"""

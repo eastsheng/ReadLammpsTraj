@@ -4,6 +4,7 @@ README.md
 requirements.txt
 setup.py
 demo/1000.lammpstrj
+demo/ReadLammpsTraj.py
 demo/cal_density.py
 demo/__pycache__/ReadLammpsTraj.cpython-311.pyc
 demo/imgs/density.png
