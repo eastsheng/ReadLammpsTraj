@@ -3,7 +3,7 @@
 import numpy as np 
 import pandas as pd
 
-version = "1.1.5"
+version = "1.1.6"
 
 def print_ReadLammpsTraj():
     cloud = [
