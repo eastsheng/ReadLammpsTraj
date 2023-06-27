@@ -162,6 +162,25 @@ class ReadLammpsTraj(object):
 
 		return position
 
+
+
+	def read_mxyz_add_mass(self,nframe,atomtype_list,mass_list):
+		# 不区分分子类型，计算所有的密度所需
+		traj = self.read_traj(nframe)
+		# print(traj)
+		self.mol = traj.loc[:,"mol"].values.astype(np.int64)#id mol type
+		self.atom = traj.loc[:,"type"].values.astype(np.int64)#id atom type
+		xyz = traj.loc[:,"x":"z"].values.astype(np.float64) # x y z
+		# print(xyz.shape)
+		mass_array = np.zeros(len(xyz)).reshape(-1,1)
+		for i in range(len(xyz)):
+			for j in range(len(mass_list)):
+				if self.atom[i] == atomtype_list[j]:
+					mass_array[i] = mass_list[j]
+		mxyz = np.hstack((mass_array,xyz))
+		return mxyz
+
+
 	def read_traj(self,nframe):
 		"""
 		read data of nth frame from traj...
@@ -303,18 +322,18 @@ class ReadLammpsTraj(object):
 		rho_n = np.array(rho_n).reshape(-1,1)	
 		return lc_n,rho_n
 
-	def TwoD_Density(self,mxyz,id_range,Nx=1,Ny=1,Nz=1,mass_or_number="mass"):
+	def TwoD_Density(self,mxyz,atomtype_n,Nx=1,Ny=1,Nz=1,mass_or_number="mass"):
 		'''
 		mxyz: mass x y z
 		atom_n: tot number of atoms
-		id_range: type of molecules,list,id_range=[1,36], the 1 is the first mol type and 36 is the last one mol type
+		atomtype_n: type of molecules,list,atom_n=[1,36], the 1 is the first atom type and 36 is the last one atom type
 		Nx,Ny,Nz: layer number of x , y, z for calculating density, which is relate to the precision of density,
 		and default is 1, that is, the total density.
 		mass_or_number: "mass: mass density; number: number density"
 		'''
 		unitconvert = self.amu2g*(self.A2CM)**3
-		dX = self.Lz/Nx #x方向bin
-		dY = self.Lz/Ny #y方向bin
+		dX = self.Lx/Nx #x方向bin
+		dY = self.Ly/Ny #y方向bin
 		dZ = self.Lz/Nz #z方向bin
 		MW = mxyz[:,0] #相对分子质量
 		X = mxyz[:,1] #x
@@ -329,10 +348,11 @@ class ReadLammpsTraj(object):
 			xc_n.append(xc)
 			print(xi,'---Nx:---',Nx)
 			for yi in range(Ny):
-				# print(yi,'---Ny:---',Ny)
+				print(yi,'---Ny:---',Ny)
 				y0 = self.ylo+dY*yi #down coord of bin
 				y1 = self.ylo+dY*(yi+1) #down coord of bin
 				yc = (y0+y1)*0.5
+				# print(yc)
 				yc_n.append(yc)
 				for zi in range(Nz):
 					# print(zi,'---Nz:---',Nz)
@@ -345,7 +365,7 @@ class ReadLammpsTraj(object):
 
 					for i in range(self.atom_n):
 						
-						if self.mol[i]>=id_range[0] and self.mol[i]<=id_range[1]:
+						if self.atom[i]>=atomtype_n[0] and self.atom[i]<=atomtype_n[1]:
 							if X[i]>=x0 and X[i]<=x1 and Y[i]>=y0 and Y[i]<=y1 and Z[i]>=z0 and Z[i]<=z1:
 								if mass_or_number == "mass":
 									n = MW[i]+n
