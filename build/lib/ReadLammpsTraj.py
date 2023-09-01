@@ -3,7 +3,7 @@
 import numpy as np 
 import pandas as pd
 
-version = "1.1.5"
+version = "1.1.8"
 
 def print_ReadLammpsTraj():
     cloud = [
@@ -124,7 +124,7 @@ class ReadLammpsTraj(object):
 		nframe: n_th frame, nframe>=1 and int type
 		vol: volume of system, unit: A^3
 		"""
-		skip = 5*nframe+(self.atom_n+4)*(nframe-1)
+		skip = 5*(nframe+1)+(self.atom_n+4)*(nframe)
 		vol_xyz = np.loadtxt(self.f,skiprows=skip,max_rows=3)
 		# print(vol_xyz)
 		xL = vol_xyz[0,1]-vol_xyz[0,0]
@@ -186,11 +186,11 @@ class ReadLammpsTraj(object):
 		read data of nth frame from traj...
 		nframe: number of frame 
 		"""
-		skip = 9*nframe+self.atom_n*(nframe-1)
+		skip = 9*(nframe+1)+self.atom_n*(nframe)
 		traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.atom_n,dtype="str")
-		print("Labels in traj is:",self.col)
+		# print("Labels in traj is:",self.col)
 		traj = pd.DataFrame(traj,columns=self.col)
-		print(traj)
+		# print(traj)
 		return traj
 
 	def oneframe_alldensity(self,mxyz,Nbin,mass_dict={},density_type="mass",direction="z"):
@@ -322,7 +322,7 @@ class ReadLammpsTraj(object):
 		rho_n = np.array(rho_n).reshape(-1,1)	
 		return lc_n,rho_n
 
-	def TwoD_Density(self,mxyz,atomtype_n,Nx=1,Ny=1,Nz=1,mass_or_number="mass"):
+	def TwoD_Density(self,mxyz,atomtype_n,Nx=1,Ny=1,Nz=1,mass_or_number="mass",id_type="mol"):
 		'''
 		mxyz: mass x y z
 		atom_n: tot number of atoms
@@ -339,6 +339,10 @@ class ReadLammpsTraj(object):
 		X = mxyz[:,1] #x
 		Y = mxyz[:,2] #y
 		Z = mxyz[:,3] #z
+		if id_type == "mol":
+			id_know = self.mol
+		elif id_type == "atom":
+			id_know = self.atom
 		xc_n,yc_n,zc_n = [],[],[]
 		rho_n = [] #average density list in every bins
 		for xi in range(Nx):
@@ -348,7 +352,7 @@ class ReadLammpsTraj(object):
 			xc_n.append(xc)
 			print(xi,'---Nx:---',Nx)
 			for yi in range(Ny):
-				print(yi,'---Ny:---',Ny)
+				# print(yi,'---Ny:---',Ny)
 				y0 = self.ylo+dY*yi #down coord of bin
 				y1 = self.ylo+dY*(yi+1) #down coord of bin
 				yc = (y0+y1)*0.5
@@ -365,7 +369,7 @@ class ReadLammpsTraj(object):
 
 					for i in range(self.atom_n):
 						
-						if self.atom[i]>=atomtype_n[0] and self.atom[i]<=atomtype_n[1]:
+						if id_know[i]>=atomtype_n[0] and id_know[i]<=atomtype_n[1]:
 							if X[i]>=x0 and X[i]<=x1 and Y[i]>=y0 and Y[i]<=y1 and Z[i]>=z0 and Z[i]<=z1:
 								if mass_or_number == "mass":
 									n = MW[i]+n

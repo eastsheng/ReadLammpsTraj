@@ -1,6 +1,7 @@
 """run this
 python setup.py sdist
 pip install .
+twine upload dist/*
 """
 
 from setuptools import setup, find_packages
@@ -14,7 +15,7 @@ with open("requirements.txt","r") as f:
 
 setup(
 name         = 'ReadLammpsTraj',
-version      = '1.1.6',
+version      = '1.1.8',
 py_modules   = ['ReadLammpsTraj'],
 author       = 'CHENDONGSHENG',
 author_email = 'eastsheng@hotmail.com',
