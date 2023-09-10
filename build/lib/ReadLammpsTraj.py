@@ -2,7 +2,7 @@
 # id mol type mass x y z vx vy vz fx fy fz q
 import numpy as np 
 import pandas as pd
-
+from tqdm import tqdm
 version = "1.1.8"
 
 def print_ReadLammpsTraj():
@@ -330,6 +330,7 @@ class ReadLammpsTraj(object):
 		Nx,Ny,Nz: layer number of x , y, z for calculating density, which is relate to the precision of density,
 		and default is 1, that is, the total density.
 		mass_or_number: "mass: mass density; number: number density"
+		id_type:"mol" or "atom" for atomtype_n
 		'''
 		unitconvert = self.amu2g*(self.A2CM)**3
 		dX = self.Lx/Nx #x方向bin
@@ -345,12 +346,12 @@ class ReadLammpsTraj(object):
 			id_know = self.atom
 		xc_n,yc_n,zc_n = [],[],[]
 		rho_n = [] #average density list in every bins
-		for xi in range(Nx):
+		for xi in tqdm(range(Nx)):
 			x0 = self.xlo+dX*xi #down coord of bin
 			x1 = self.xlo+dX*(xi+1) #down coord of bin
 			xc = (x0+x1)*0.5
 			xc_n.append(xc)
-			print(xi,'---Nx:---',Nx)
+			# print(xi,'---Nx:---',Nx)
 			for yi in range(Ny):
 				# print(yi,'---Ny:---',Ny)
 				y0 = self.ylo+dY*yi #down coord of bin
