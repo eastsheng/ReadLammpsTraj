@@ -108,15 +108,17 @@ class ReadLammpsTraj(object):
 		return self.step_inter,self.atom_n,self.Lx,self.Ly,self.Lz
 
 	def read_header(self,nframe):
+		print("--- Start read header of %s th frame ---" %nframe)
+
+		skip = int(9*(nframe)+self.atom_n*(nframe))
+
 		with open(self.f,'r') as f:
 			header = []
-			for n in range(nframe):
-				for i in range(9):
-					line = f.readline()
-					if n == nframe-1:
-						header.append(line)
-				for j in range(self.atom_n):
-					line = f.readline()
+			for n in tqdm(range(skip)):
+				f.readline()
+			for i in range(9):
+				line = f.readline()
+				header.append(line)
 
 			# for index, line in enumerate(f,1):
 
@@ -125,6 +127,7 @@ class ReadLammpsTraj(object):
 			# 		header.append(line)
 			# # header = header
 			# # print(header)
+		print("--- Read header of %s th frame done! ---" %nframe)
 		return header
 
 	def read_vol(self,nframe):
