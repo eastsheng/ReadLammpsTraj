@@ -3,7 +3,7 @@
 import numpy as np 
 import pandas as pd
 from tqdm import tqdm
-version = "1.1.8"
+version = "1.1.9"
 
 def print_ReadLammpsTraj():
     cloud = [
@@ -110,12 +110,21 @@ class ReadLammpsTraj(object):
 	def read_header(self,nframe):
 		with open(self.f,'r') as f:
 			header = []
-			for index, line in enumerate(f,1):
-				if index >=1+(self.atom_n+9)*(nframe) and index<=9+(self.atom_n+9)*(nframe):
-					# print(line)
-					header.append(line)
-			header = header
-			# print(header)
+			for n in range(nframe):
+				for i in range(9):
+					line = f.readline()
+					if n == nframe-1:
+						header.append(line)
+				for j in range(self.atom_n):
+					line = f.readline()
+
+			# for index, line in enumerate(f,1):
+
+			# 	if index >=1+(self.atom_n+9)*(nframe) and index<=9+(self.atom_n+9)*(nframe):
+			# 		# print(line)
+			# 		header.append(line)
+			# # header = header
+			# # print(header)
 		return header
 
 	def read_vol(self,nframe):
