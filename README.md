@@ -26,6 +26,7 @@ import ReadLammpsTraj as RLT
 
 md = RLT.ReadLammpsTraj(f)
 # read header info from lammpstrj 
+md.__version__()
 md.read_info()
 # read mass x y z info from lammpstrj 
 position = md.read_mxyz(i)
@@ -40,4 +41,5 @@ x,y,z,rho= md.TwoD_Density(position,atomtype_n=[1,2],Nx=60,Ny=1,Nz=60,mass_or_nu
 ### Fixes
 
 - [x] Add `id_type` arg for `TwoD_Density()` function.
+- [x] Modify the `read_header()` function
 
