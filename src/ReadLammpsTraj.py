@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import datetime
+from itertools import islice
 version = "1.1.9"
 
 def read_mass(lammpsdata):
@@ -112,15 +113,20 @@ class ReadLammpsTraj(object):
 		# print("--- Start read header of %s th frame ---" %nframe)
 
 		skip = int(9*(nframe)+self.atom_n*(nframe))
+		header = []
+		
 		with open(self.f,'r') as f:
-			header = []
-			for n in range(skip):
-				f.readline()
-			for i in range(9):
-				line = f.readline()
+			for line in islice(f,skip,skip+9):
 				header.append(line)
 
-		# print("--- Read header of %s th frame done! ---" %nframe)
+		# with open(self.f,'r') as f:
+		# 	for n in range(skip):
+		# 		f.readline()
+		# 	for i in range(9):
+		# 		line = f.readline()
+		# 		header.append(line)
+		
+		print("--- Read header of %s th frame done! ---" %nframe)
 		return header
 
 	def read_vol(self,nframe):
