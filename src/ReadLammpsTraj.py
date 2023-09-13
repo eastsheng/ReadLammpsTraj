@@ -3,31 +3,8 @@
 import numpy as np 
 import pandas as pd
 from tqdm import tqdm
+import datetime
 version = "1.1.9"
-
-def print_ReadLammpsTraj():
-    cloud = [
-			"______                   _    _       _____                 _ ",
-			"| ___ \                 | |  | |     |_   _|               (_)",
-			"| |_/ /  ___   __ _   __| |  | |       | |   _ __   __ _    _ ",
-			"|    /  / _ \ / _` | / _` |  | |       | |  | '__| / _` |  | |",
-			"| |\ \ |  __/| (_| || (_| |  | |____   | |  | |   | (_| |  | |",
-			"\_| \_| \___| \__,_| \__,_|  \_____/   \_/  |_|    \__,_|  | |",
-			"                                                          _/ |",
-			"                                                         |__/ ",
-    ]
-    n = 32
-    print("\n")
-    print(n*"- ")
-    print(n*". ")
-    for line in cloud:
-        print(line)
-    print('@ReadLammpsTraj-'+version,", Good Luck!")
-    print(n*". ")
-    print(n*"- ")
-    return None
-
-print_ReadLammpsTraj()
 
 def read_mass(lammpsdata):
 	"""
@@ -71,6 +48,30 @@ class ReadLammpsTraj(object):
 		self.amu2g = 6.02214076208112e23
 		self.A2CM = 1e-8 
 		self.timestep=timestep#fs
+
+	def __version__(self):
+	    cloud = [
+				"______                   _    _       _____                 _ ",
+				"| ___ \                 | |  | |     |_   _|               (_)",
+				"| |_/ /  ___   __ _   __| |  | |       | |   _ __   __ _    _ ",
+				"|    /  / _ \ / _` | / _` |  | |       | |  | '__| / _` |  | |",
+				"| |\ \ |  __/| (_| || (_| |  | |____   | |  | |   | (_| |  | |",
+				"\_| \_| \___| \__,_| \__,_|  \_____/   \_/  |_|    \__,_|  | |",
+				"                                                          _/ |",
+				"                                                         |__/ ",
+	    ]
+	    n = 32
+	    print(n*"- ")
+	    print(n*". ")
+	    for line in cloud:
+	        print(line)
+	    print('@ReadLammpsTraj-'+version,", Good Luck!")
+	    print(n*". ")
+	    print(n*"- ")
+	    current_datetime = datetime.datetime.now()
+	    return print("Time:",current_datetime)
+
+
 	def read_info(self,):
 		with open(self.f,'r') as f:
 			L1 = f.readline()
@@ -98,36 +99,28 @@ class ReadLammpsTraj(object):
 			try:
 				step2 = int(f.readline())
 				self.step_inter = step2-step1
-				print("Step interval:",self.step_inter,"\nAtom number:",self.atom_n)
-				print("xlo:",self.xlo,"xhi:",self.xhi,"Lx:",self.Lx)
-				print("ylo:",self.ylo,"yhi:",self.yhi,"Ly:",self.Ly)
-				print("zlo:",self.zlo,"zhi:",self.zhi,"Lz:",self.Lz)
+				# print("Step interval:",self.step_inter,"\nAtom number:",self.atom_n)
+				# print("xlo:",self.xlo,"xhi:",self.xhi,"Lx:",self.Lx)
+				# print("ylo:",self.ylo,"yhi:",self.yhi,"Ly:",self.Ly)
+				# print("zlo:",self.zlo,"zhi:",self.zhi,"Lz:",self.Lz)
 			except:
 				self.step_inter = 0
-				print("pass")
+				# print("pass")
 		return self.step_inter,self.atom_n,self.Lx,self.Ly,self.Lz
 
 	def read_header(self,nframe):
-		print("--- Start read header of %s th frame ---" %nframe)
+		# print("--- Start read header of %s th frame ---" %nframe)
 
 		skip = int(9*(nframe)+self.atom_n*(nframe))
-
 		with open(self.f,'r') as f:
 			header = []
-			for n in tqdm(range(skip)):
+			for n in range(skip):
 				f.readline()
 			for i in range(9):
 				line = f.readline()
 				header.append(line)
 
-			# for index, line in enumerate(f,1):
-
-			# 	if index >=1+(self.atom_n+9)*(nframe) and index<=9+(self.atom_n+9)*(nframe):
-			# 		# print(line)
-			# 		header.append(line)
-			# # header = header
-			# # print(header)
-		print("--- Read header of %s th frame done! ---" %nframe)
+		# print("--- Read header of %s th frame done! ---" %nframe)
 		return header
 
 	def read_vol(self,nframe):
