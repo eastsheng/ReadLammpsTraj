@@ -3,31 +3,9 @@
 import numpy as np 
 import pandas as pd
 from tqdm import tqdm
+import datetime
+from itertools import islice
 version = "1.1.9"
-
-def print_ReadLammpsTraj():
-    cloud = [
-			"______                   _    _       _____                 _ ",
-			"| ___ \                 | |  | |     |_   _|               (_)",
-			"| |_/ /  ___   __ _   __| |  | |       | |   _ __   __ _    _ ",
-			"|    /  / _ \ / _` | / _` |  | |       | |  | '__| / _` |  | |",
-			"| |\ \ |  __/| (_| || (_| |  | |____   | |  | |   | (_| |  | |",
-			"\_| \_| \___| \__,_| \__,_|  \_____/   \_/  |_|    \__,_|  | |",
-			"                                                          _/ |",
-			"                                                         |__/ ",
-    ]
-    n = 32
-    print("\n")
-    print(n*"- ")
-    print(n*". ")
-    for line in cloud:
-        print(line)
-    print('@ReadLammpsTraj-'+version,", Good Luck!")
-    print(n*". ")
-    print(n*"- ")
-    return None
-
-print_ReadLammpsTraj()
 
 def read_mass(lammpsdata):
 	"""
@@ -71,6 +49,30 @@ class ReadLammpsTraj(object):
 		self.amu2g = 6.02214076208112e23
 		self.A2CM = 1e-8 
 		self.timestep=timestep#fs
+
+	def __version__(self):
+	    cloud = [
+				"______                   _    _       _____                 _ ",
+				"| ___ \                 | |  | |     |_   _|               (_)",
+				"| |_/ /  ___   __ _   __| |  | |       | |   _ __   __ _    _ ",
+				"|    /  / _ \ / _` | / _` |  | |       | |  | '__| / _` |  | |",
+				"| |\ \ |  __/| (_| || (_| |  | |____   | |  | |   | (_| |  | |",
+				"\_| \_| \___| \__,_| \__,_|  \_____/   \_/  |_|    \__,_|  | |",
+				"                                                          _/ |",
+				"                                                         |__/ ",
+	    ]
+	    n = 32
+	    print(n*"- ")
+	    print(n*". ")
+	    for line in cloud:
+	        print(line)
+	    print('@ReadLammpsTraj-'+version,", Good Luck!")
+	    print(n*". ")
+	    print(n*"- ")
+	    current_datetime = datetime.datetime.now()
+	    return print("Time:",current_datetime)
+
+
 	def read_info(self,):
 		with open(self.f,'r') as f:
 			L1 = f.readline()
@@ -98,27 +100,32 @@ class ReadLammpsTraj(object):
 			try:
 				step2 = int(f.readline())
 				self.step_inter = step2-step1
-				print("Step interval:",self.step_inter,"\nAtom number:",self.atom_n)
-				print("xlo:",self.xlo,"xhi:",self.xhi,"Lx:",self.Lx)
-				print("ylo:",self.ylo,"yhi:",self.yhi,"Ly:",self.Ly)
-				print("zlo:",self.zlo,"zhi:",self.zhi,"Lz:",self.Lz)
+				# print("Step interval:",self.step_inter,"\nAtom number:",self.atom_n)
+				# print("xlo:",self.xlo,"xhi:",self.xhi,"Lx:",self.Lx)
+				# print("ylo:",self.ylo,"yhi:",self.yhi,"Ly:",self.Ly)
+				# print("zlo:",self.zlo,"zhi:",self.zhi,"Lz:",self.Lz)
 			except:
 				self.step_inter = 0
-				print("pass")
+				# print("pass")
 		return self.step_inter,self.atom_n,self.Lx,self.Ly,self.Lz
 
 	def read_header(self,nframe):
-		print("--- Start read header of %s th frame ---" %nframe)
+		# print("--- Start read header of %s th frame ---" %nframe)
 
 		skip = int(9*(nframe)+self.atom_n*(nframe))
+		header = []
+		
 		with open(self.f,'r') as f:
-			header = []
-			for n in range(skip):
-				f.readline()
-			for i in range(9):
-				line = f.readline()
+			for line in islice(f,skip,skip+9):
 				header.append(line)
 
+		# with open(self.f,'r') as f:
+		# 	for n in range(skip):
+		# 		f.readline()
+		# 	for i in range(9):
+		# 		line = f.readline()
+		# 		header.append(line)
+		
 		print("--- Read header of %s th frame done! ---" %nframe)
 		return header
 
@@ -413,3 +420,29 @@ class ReadLammpsTraj(object):
 		else:
 			dr = dr
 		return dr
+		
+	def zoning(self,sorted_traj,axis_range,direc="y"):
+		"""
+		Divide a coordinate interval along a direction, such as, x or y or z
+		sorted_traj: sorted lammps traj, pandas dataframe format, it includes at least 'id mol type x y z'
+		axis_range: Divide interval, a list, such as, axis_range = [0,3.5], unit/Angstrom
+		direc: The direction to be divided, default direc="y"
+		"""
+		m,n = sorted_traj.shape
+		if direc=="X":
+			direc = "x"
+		elif direc=="Y":
+			direc = "y"
+		elif direc=="Z":
+			direc = "z"
+		else:
+			direc = "y"
+		# whether in the interval
+		condition1 = (sorted_traj[direc].between(axis_range[0],axis_range[1]))
+		sorted_zoning_traj = sorted_traj[condition1]
+		# Whether it's the same molecule
+		mols = sorted_zoning_traj["mol"]
+		condition2 = (sorted_traj["mol"].isin(mols))
+		sorted_zoning_traj = sorted_traj[condition2]
+
+		return sorted_zoning_traj

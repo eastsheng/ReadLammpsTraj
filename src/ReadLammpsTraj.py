@@ -420,3 +420,29 @@ class ReadLammpsTraj(object):
 		else:
 			dr = dr
 		return dr
+		
+	def zoning(self,sorted_traj,axis_range,direc="y"):
+		"""
+		Divide a coordinate interval along a direction, such as, x or y or z
+		sorted_traj: sorted lammps traj, pandas dataframe format, it includes at least 'id mol type x y z'
+		axis_range: Divide interval, a list, such as, axis_range = [0,3.5], unit/Angstrom
+		direc: The direction to be divided, default direc="y"
+		"""
+		m,n = sorted_traj.shape
+		if direc=="X":
+			direc = "x"
+		elif direc=="Y":
+			direc = "y"
+		elif direc=="Z":
+			direc = "z"
+		else:
+			direc = "y"
+		# whether in the interval
+		condition1 = (sorted_traj[direc].between(axis_range[0],axis_range[1]))
+		sorted_zoning_traj = sorted_traj[condition1]
+		# Whether it's the same molecule
+		mols = sorted_zoning_traj["mol"]
+		condition2 = (sorted_traj["mol"].isin(mols))
+		sorted_zoning_traj = sorted_traj[condition2]
+
+		return sorted_zoning_traj
