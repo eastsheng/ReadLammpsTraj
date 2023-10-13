@@ -5,17 +5,18 @@ twine upload dist/*
 """
 
 from setuptools import setup, find_packages
-
+from src.ReadLammpsTraj import __version__
 with open("README.md", "r") as f:
     long_description = f.read()
 
 with open("requirements.txt","r") as f:
     required = f.read().splitlines()
 
+version = __version__()
 
 setup(
 name         = 'ReadLammpsTraj',
-version      = '1.1.9',
+version      = version,
 py_modules   = ['ReadLammpsTraj'],
 author       = 'CHENDONGSHENG',
 author_email = 'eastsheng@hotmail.com',

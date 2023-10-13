@@ -5,7 +5,35 @@ import pandas as pd
 from tqdm import tqdm
 import datetime
 from itertools import islice
-version = "1.1.9"
+
+def __version__():
+	version = "1.1.9"
+	return version
+
+def __print_version__():
+    cloud = [
+			"______                   _    _       _____                 _ ",
+			"| ___ \                 | |  | |     |_   _|               (_)",
+			"| |_/ /  ___   __ _   __| |  | |       | |   _ __   __ _    _ ",
+			"|    /  / _ \ / _` | / _` |  | |       | |  | '__| / _` |  | |",
+			"| |\ \ |  __/| (_| || (_| |  | |____   | |  | |   | (_| |  | |",
+			"\_| \_| \___| \__,_| \__,_|  \_____/   \_/  |_|    \__,_|  | |",
+			"                                                          _/ |",
+			"                                                         |__/ ",
+    ]
+    n = 32
+    print(n*"- ")
+    print(n*". ")
+    for line in cloud:
+        print(line)
+    version = __version__()
+    print('@ReadLammpsTraj-'+version,", Good Luck!")
+    print(n*". ")
+    print(n*"- ")
+    current_datetime = datetime.datetime.now()
+    return print("Time:",current_datetime)
+
+
 
 def read_mass(lammpsdata):
 	"""
@@ -49,29 +77,6 @@ class ReadLammpsTraj(object):
 		self.amu2g = 6.02214076208112e23
 		self.A2CM = 1e-8 
 		self.timestep=timestep#fs
-
-	def __version__(self):
-	    cloud = [
-				"______                   _    _       _____                 _ ",
-				"| ___ \                 | |  | |     |_   _|               (_)",
-				"| |_/ /  ___   __ _   __| |  | |       | |   _ __   __ _    _ ",
-				"|    /  / _ \ / _` | / _` |  | |       | |  | '__| / _` |  | |",
-				"| |\ \ |  __/| (_| || (_| |  | |____   | |  | |   | (_| |  | |",
-				"\_| \_| \___| \__,_| \__,_|  \_____/   \_/  |_|    \__,_|  | |",
-				"                                                          _/ |",
-				"                                                         |__/ ",
-	    ]
-	    n = 32
-	    print(n*"- ")
-	    print(n*". ")
-	    for line in cloud:
-	        print(line)
-	    print('@ReadLammpsTraj-'+version,", Good Luck!")
-	    print(n*". ")
-	    print(n*"- ")
-	    current_datetime = datetime.datetime.now()
-	    return print("Time:",current_datetime)
-
 
 	def read_info(self,):
 		with open(self.f,'r') as f:
