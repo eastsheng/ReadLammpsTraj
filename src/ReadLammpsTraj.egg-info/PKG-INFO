@@ -53,6 +53,10 @@ x,y,z,rho= md.TwoD_Density(position,atomtype_n=[1,2],Nx=60,Ny=1,Nz=60,mass_or_nu
 
 ### Fixes
 
-- [x] Add `id_type` arg for `TwoD_Density()` function.
-- [x] Modify the `read_header()` function
+- v1.1.9
+
+  - [x] Add `id_type` arg for `TwoD_Density()` function.
+
+  - [x] Modify the `read_header()` function
+
 
