@@ -7,9 +7,6 @@ Author: CHENDONGSHENG
 Author-email: eastsheng@hotmail.com
 Description-Content-Type: text/markdown
 License-File: LICENSE
-Requires-Dist: numpy>=1.24.3
-Requires-Dist: pandas>=2.0.3
-Requires-Dist: tqdm>=4.66.1
 
 ## ReadLammpsTraj
 - Read lammps dump trajectory

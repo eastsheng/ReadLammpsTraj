@@ -8,7 +8,7 @@ from itertools import islice
 import time
 
 def __version__():
-	version = "1.1.9"
+	version = "1.2.0"
 	return version
 
 def print_line(func):
