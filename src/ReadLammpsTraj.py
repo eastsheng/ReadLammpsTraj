@@ -464,3 +464,40 @@ class ReadLammpsTraj(object):
 		sorted_zoning_traj = sorted_traj[condition2]
 
 		return sorted_zoning_traj
+
+	def read_box(self,nframe):
+		header = self.read_header(nframe)
+		xlo = float(header[5].split()[0])
+		xhi = float(header[5].split()[1])
+		ylo = float(header[6].split()[0])
+		yhi = float(header[6].split()[1])
+		zlo = float(header[7].split()[0])
+		zhi = float(header[7].split()[1])
+		box = {
+				"xlo": xlo,
+				"xhi": xhi,
+				"ylo": zlo,
+				"yhi": yhi,
+				"zlo": zlo,
+				"zhi": zhi
+		}
+		return box
+
+	def dividing(self,L0,L1,lbin):
+		n = int((L1-L0)/lbin)
+		if n % 2 == 0:
+			pass
+		else:
+			n = n+1
+		nLs = np.linspace(L0,L1,n)
+		nLs = nLs.reshape(-1,2)
+
+		return nLs
+
+
+if __name__ == "__main__":
+	lammpstrj = "traj_nvt_relax_353.15_1.lammpstrj"
+	rlt = ReadLammpsTraj(lammpstrj)
+	rlt.read_info()
+	box = rlt.read_box(0)
+	rlt.dividing(box["ylo"],box["yhi"],1.0)
