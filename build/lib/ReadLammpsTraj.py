@@ -5,6 +5,7 @@ import pandas as pd
 from tqdm import tqdm
 import datetime
 from itertools import islice
+import periodictable as pt
 import time
 
 def __version__():
@@ -47,151 +48,170 @@ def __print_version__():
     return print("Time:",current_datetime)
 
 
-
-def read_mass(lammpsdata):
+def element2mass(elements,modify=False):
 	"""
-	read atomic mass from lammps data. 
+	elements to masses
+	Parameters:
+	elements: a list of elements
+	modify: need to modify mass, default False, modify={"C": 16.043}
 	"""
-	data = open(lammpsdata,"r")
-	lines = data.read()
-	mass = []
-	(header,mass_other)=lines.split("\n\nMasses\n\n")
-	try:
-		try:
-			try:
-				(mass,other)=mass_other.split("\n\nPair Coeffs ")
-			except:
-				(mass,other)=mass_other.split("\n\nBond Coeffs ")
-		except:
-			(mass,other)=mass_other.split("\n\nAngle Coeffs ")
-	except:
-		(mass,other)=mass_other.split("\n\nAtoms # ")
-
-	mass=list(mass.split('\n'))
-	mass = list(filter(None, mass))
-	mass_id,mass_sub = [], []
-	for i in range(len(mass)):
-		mass_uu = mass[i].strip(" ").split(" ")
-		mass_id.append(int(mass_uu[0]))
-		mass_sub.append(float(mass_uu[1]))
-
-	pairs = zip(mass_id,mass_sub)
-	mass_dict = {k: v for k, v in pairs}
-
-	return mass_dict
-
+	allelements = pt.elements
+	# print(elements)
+	masses = []
+	for elementi in elements:
+		for elementj in allelements:
+			if modify == False:
+				if elementi == elementj.symbol:
+					masses.append(elementj.mass)
+			else:
+				if elementi == elementj.symbol:
+					for key, value in modify.items():
+						if elementi == key:
+							masses.append(value)
+						else:
+							masses.append(elementj.mass)
+	return masses
 
 
 class ReadLammpsTraj(object):
-	"""docstring for ClassName"""
-	def __init__(self,f,timestep=1):
+	"""Read lammps trajectory file"""
+	def __init__(self,f):
 		super(ReadLammpsTraj, self).__init__()
 		self.f = f
 		self.amu2g = 6.02214076208112e23
 		self.A2CM = 1e-8 
-		self.timestep=timestep#fs
 
 	def read_info(self,):
+		header = []
 		with open(self.f,'r') as f:
-			L1 = f.readline()
-			L2 = f.readline()
-			L3 = f.readline()
-			L4 = f.readline()
-			L5 = f.readline()
-			L6 = f.readline()
-			L7 = f.readline()
-			L8 = f.readline()
-			L9 = f.readline().strip().split()[2:]#列标签
-			self.col = L9
-			step1 = int(L2)
-			self.atom_n = int(L4)
-			self.xlo,self.xhi = float(L6.split()[0]),float(L6.split()[1])
-			self.ylo,self.yhi = float(L7.split()[0]),float(L7.split()[1])
-			self.zlo,self.zhi = float(L8.split()[0]),float(L8.split()[1])
-			self.Lx = self.xhi-self.xlo
-			self.Ly = self.yhi-self.ylo
-			self.Lz = self.zhi-self.zlo
-			self.vlo = self.Lx*self.Ly*self.Lz
-			for i in range(self.atom_n+1):
-				Li = f.readline()
-				# print(Li)
-			try:
-				step2 = int(f.readline())
-				self.step_inter = step2-step1
-				# print("Step interval:",self.step_inter,"\nAtom number:",self.atom_n)
-				# print("xlo:",self.xlo,"xhi:",self.xhi,"Lx:",self.Lx)
-				# print("ylo:",self.ylo,"yhi:",self.yhi,"Ly:",self.Ly)
-				# print("zlo:",self.zlo,"zhi:",self.zhi,"Lz:",self.Lz)
-			except:
-				self.step_inter = 0
-				# print("pass")
-		return self.step_inter,self.atom_n,self.Lx,self.Ly,self.Lz
+			for line in islice(f, 0, 9):
+				header.append(line)
+		self.natoms = int(header[3])
+		header0 = self.read_header(0)
+		header1 = self.read_header(1)
+		self.step_inter = int(header1[1])-int(header0[1])
+		self.col = header0[8].strip().split()[2:]
+		box = self.read_box(0)
+		self.xlo,self.xhi = box["xhi"], box["xlo"]
+		self.ylo,self.yhi = box["yhi"], box["ylo"]
+		self.zlo,self.zhi = box["zhi"], box["zlo"]
+		self.Lx = self.xhi-self.xlo
+		self.Ly = self.yhi-self.ylo
+		self.Lz = self.zhi-self.zlo
+		return self.step_inter, self.natoms, self.Lx, self.Ly, self.Lz
 
 	def read_header(self,nframe):
-		# print("--- Start read header of %s th frame ---" %nframe)
-
-		skip = int(9*(nframe)+self.atom_n*(nframe))
+		"""
+		read header of nth-frame
+		Parameters:
+		- nframe: number of frame
+		Return a list
+		"""
+		# try:
+		skip = int(9*(nframe)+self.natoms*(nframe))
+		# except:
+		# 	skip = 0
 		header = []
-		
 		with open(self.f,'r') as f:
 			for line in islice(f,skip,skip+9):
 				header.append(line)
-
-		# with open(self.f,'r') as f:
-		# 	for n in range(skip):
-		# 		f.readline()
-		# 	for i in range(9):
-		# 		line = f.readline()
-		# 		header.append(line)
-		
-		print("--- Read header of %s th frame done! ---" %nframe)
 		return header
+
+	def read_traj(self,nframe):
+		"""
+		read data of nth frame from traj...
+		nframe: number of frame 
+		"""
+		skip = 9*(nframe+1)+self.natoms*(nframe)
+		traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.natoms,dtype="str")
+		traj = pd.DataFrame(traj,columns=self.col)
+		traj["id"] = pd.to_numeric(traj["id"],errors='coerce').astype("Int64")
+		traj = traj.sort_values(by="id")
+		return traj
+
+
+	def read_box(self,nframe):
+		"""
+		read box from header
+		Parameters:
+		nframe: number of frame
+		Return a dict
+		"""
+		header = self.read_header(nframe)
+		xlo = float(header[5].split()[0])
+		xhi = float(header[5].split()[1])
+		ylo = float(header[6].split()[0])
+		yhi = float(header[6].split()[1])
+		zlo = float(header[7].split()[0])
+		zhi = float(header[7].split()[1])
+		box = {
+				"xlo": xlo,
+				"xhi": xhi,
+				"ylo": ylo,
+				"yhi": yhi,
+				"zlo": zlo,
+				"zhi": zhi
+		}
+		return box
+
 
 	def read_vol(self,nframe):
 		"""
-		calculate the volume by traj file
-		nframe: n_th frame, nframe>=1 and int type
-		vol: volume of system, unit: A^3
+		read and calculate vol from header
+		Parameters:
+		nframe: number of frame
+		Return a vol value unit/A^3
 		"""
-		skip = 5*(nframe+1)+(self.atom_n+4)*(nframe)
-		vol_xyz = np.loadtxt(self.f,skiprows=skip,max_rows=3)
-		# print(vol_xyz)
-		xL = vol_xyz[0,1]-vol_xyz[0,0]
-		yL = vol_xyz[1,1]-vol_xyz[1,0]
-		zL = vol_xyz[2,1]-vol_xyz[2,0]
-		vol = xL*yL*zL
+		box = self.read_box(nframe)
+		lx = box["xhi"]-box["xlo"]
+		ly = box["yhi"]-box["ylo"]
+		lz = box["zhi"]-box["zlo"]
+		vol = lx*ly*lz
 		return  vol
 
-	def read_mxyz(self,nframe):
+	def read_xyz(self,nframe):
 		"""
-		read mass, and x, y, z coordinates of nth frame from traj...
+		read x, y, z coordinates of nth frame from traj...
 		nframe: number of frame 
 		"""
 		traj = self.read_traj(nframe)
-		try:
-			self.mol = traj.loc[:,"mol"].values.astype(np.int64)#id mol type
-		except:
-			print("No molecule types in traj...")
+		xyz = traj.loc[:,"x":"z"].values.astype(np.float64) # x y z
+		return xyz
+
+
+	def read_mxyz(self,nframe,modify=False):
+		"""
+		read mass, and x, y, z coordinates of nth frame from traj...
+		nframe: number of frame 
+		modify: need to modify mass, default False, modify={"C": 16.043}
+		"""
+		traj = self.read_traj(nframe)
 
 		try:
 			self.atom = traj.loc[:,"type"].values.astype(np.int64)#id atom type
 		except:
-			print("No atom types in traj...")
+			print(">>> No atom types in traj...")
 
 		xyz = traj.loc[:,"x":"z"].values.astype(np.float64) # x y z
 
 		try:
 			mass = traj.loc[:,"mass"].values.astype(np.float64)#mass
 		except:
-			print("No mass out in traj...")
-			mass = np.zeros(len(xyz))
+			print(">>> No mass out in traj...")
+			try:
+				self.element = traj.loc[:,"element"].values
+				mass = element2mass(self.element,modify=modify)
+				mass = np.array(mass)
+				print(">>> Read mass from elements successfully !")
+			except:
+				print(">>> No element types in traj...")
+				mass = np.zeros(len(xyz))
+
 		mxyz = np.hstack((mass.reshape(-1,1),xyz))
 
 		position = mxyz
 
 		return position
-
-
 
 	def read_mxyz_add_mass(self,nframe,atomtype_list,mass_list):
 		# 不区分分子类型，计算所有的密度所需
@@ -200,7 +220,6 @@ class ReadLammpsTraj(object):
 		self.mol = traj.loc[:,"mol"].values.astype(np.int64)#id mol type
 		self.atom = traj.loc[:,"type"].values.astype(np.int64)#id atom type
 		xyz = traj.loc[:,"x":"z"].values.astype(np.float64) # x y z
-		# print(xyz.shape)
 		mass_array = np.zeros(len(xyz)).reshape(-1,1)
 		for i in range(len(xyz)):
 			for j in range(len(mass_list)):
@@ -209,18 +228,6 @@ class ReadLammpsTraj(object):
 		mxyz = np.hstack((mass_array,xyz))
 		return mxyz
 
-
-	def read_traj(self,nframe):
-		"""
-		read data of nth frame from traj...
-		nframe: number of frame 
-		"""
-		skip = 9*(nframe+1)+self.atom_n*(nframe)
-		traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.atom_n,dtype="str")
-		# print("Labels in traj is:",self.col)
-		traj = pd.DataFrame(traj,columns=self.col)
-		# print(traj)
-		return traj
 
 	def oneframe_alldensity(self,mxyz,Nbin,mass_dict={},density_type="mass",direction="z"):
 		"""
@@ -268,7 +275,7 @@ class ReadLammpsTraj(object):
 			l0 = lo+dr*n #down coord of bin
 			l1 = lo+dr*(n+1)#up coord of bin
 			lc = (l0+l1)*0.5
-			for i in range(self.atom_n):
+			for i in range(self.natoms):
 				if L[i]>=l0 and L[i]<=l1:
 					if density_type == "mass":
 						mass_n = MW[i]+mass_n
@@ -335,7 +342,7 @@ class ReadLammpsTraj(object):
 			l1 = lo+dr*(n+1)#up coord of bin
 			lc = (l0+l1)*0.5
 			# print(z0,z1,zc)
-			for i in range(self.atom_n):
+			for i in range(self.natoms):
 				if id_know[i]>=id_range[0] and id_know[i]<=id_range[1]:
 					# if i atom in [z0:z1]
 					if L[i]>=l0 and L[i]<=l1:
@@ -354,8 +361,8 @@ class ReadLammpsTraj(object):
 	def TwoD_Density(self,mxyz,atomtype_n,Nx=1,Ny=1,Nz=1,mass_or_number="mass",id_type="mol"):
 		'''
 		mxyz: mass x y z
-		atom_n: tot number of atoms
-		atomtype_n: type of molecules,list,atom_n=[1,36], the 1 is the first atom type and 36 is the last one atom type
+		natoms: tot number of atoms
+		atomtype_n: type of molecules,list,natoms=[1,36], the 1 is the first atom type and 36 is the last one atom type
 		Nx,Ny,Nz: layer number of x , y, z for calculating density, which is relate to the precision of density,
 		and default is 1, that is, the total density.
 		mass_or_number: "mass: mass density; number: number density"
@@ -397,7 +404,7 @@ class ReadLammpsTraj(object):
 		
 					n=0 #tot mass or number in bin
 
-					for i in range(self.atom_n):
+					for i in range(self.natoms):
 						
 						if id_know[i]>=atomtype_n[0] and id_know[i]<=atomtype_n[1]:
 							if X[i]>=x0 and X[i]<=x1 and Y[i]>=y0 and Y[i]<=y1 and Z[i]>=z0 and Z[i]<=z1:
@@ -405,7 +412,7 @@ class ReadLammpsTraj(object):
 									n = MW[i]+n
 								elif mass_or_number == "number":
 									n = n+1
-									# print(i,'---',self.atom_n,MW[i])
+									# print(i,'---',self.natoms,MW[i])
 					vlo = (dX*dY*dZ)*unitconvert
 					rho = n/vlo
 					rho_n.append(rho)
@@ -465,34 +472,43 @@ class ReadLammpsTraj(object):
 
 		return sorted_zoning_traj
 
-	def read_box(self,nframe):
-		header = self.read_header(nframe)
-		xlo = float(header[5].split()[0])
-		xhi = float(header[5].split()[1])
-		ylo = float(header[6].split()[0])
-		yhi = float(header[6].split()[1])
-		zlo = float(header[7].split()[0])
-		zhi = float(header[7].split()[1])
-		box = {
-				"xlo": xlo,
-				"xhi": xhi,
-				"ylo": zlo,
-				"yhi": yhi,
-				"zlo": zlo,
-				"zhi": zhi
-		}
-		return box
 
 	def dividing(self,L0,L1,lbin):
 		n = int((L1-L0)/lbin)
+		if n % 2 == 0:
+			pass
+		else:
+			n = n+1
 		nLs = np.linspace(L0,L1,n)
 		nLs = nLs.reshape(-1,2)
+
 		return nLs
 
 
+	def calc_bulk_density(self, nframe, modify=False):
+		"""
+		calculate bulk mass density from lammpstrj
+		Parameters:
+		- nframe: number of frame
+		- modify: need to modify mass, default False, modify={"C": 16.043}
+		Return a density value
+		"""
+		unitconvert = self.amu2g*(self.A2CM)**3 # g/mL
+		mxyz = self.read_mxyz(nframe,modify=modify)
+		vol = self.read_vol(nframe)*unitconvert
+		total_mass = np.sum(mxyz[:,0])
+		rho = total_mass/vol
+		return rho
+
+
 if __name__ == "__main__":
-	lammpstrj = "traj_nvt_relax_353.15_1.lammpstrj"
+	__print_version__()
+	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
 	rlt = ReadLammpsTraj(lammpstrj)
 	rlt.read_info()
-	box = rlt.read_box(0)
-	rlt.dividing(box["ylo"],box["yhi"],1.0)
+	# box = rlt.read_box(0)
+	# rlt.dividing(box["ylo"],box["yhi"],1.0)
+	# x = rlt.read_xyz(0)
+	# print(x)
+	# rho = rlt.calc_bulk_density(3,modify={"C": 16.043})
+	# print(rho)
