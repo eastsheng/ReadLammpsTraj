@@ -129,6 +129,58 @@ class ReadLammpsTraj(object):
 		traj = traj.sort_values(by="id")
 		return traj
 
+	def read_num_of_frames(self):
+		natoms = self.natoms
+		inputfile = self.f
+		with open(inputfile,"r") as f:
+			lines = f.readlines()
+		total_nframe = int(len(lines)/(natoms+9))
+
+		return total_nframe
+
+
+	def read_steps(self):
+		total_nframe = self.read_num_of_frames()
+		natoms = self.natoms
+		inputfile = self.f
+		steps = []
+		with open(inputfile,"r") as f:
+			for index, line in enumerate(f):
+				for j in range(total_nframe):
+					if index == (natoms+9)*j+1:
+						steps.append(int(line.strip()))
+		return steps
+
+	def read_item(self,item):
+		traj = self.read_traj(0)
+		if item in ["id","mol","type"]:
+			traj[item] = pd.to_numeric(traj[item],errors='coerce').astype("Int64")
+			item_data = traj[item].values.tolist()
+		elif item in ["mass","x","y","z","xs","ys","zs","xu","yu","zu","xsu","ysu","zsu",
+					  "ix","iy","iz","vx","vy","vz","fx","fy","fz","q","mux","muy","muz",
+					  "mu","radius","diameter","omegax","omegay","omegaz","angmomx","angmomy","angmomz",
+					  "tqx","tqy","tqz","heatflow","temperature"]:
+			traj[item] = pd.to_numeric(traj[item],errors='coerce').astype("Float64")
+			item_data = traj[item].values.tolist()
+		elif item in ["element"]:
+			item_data = traj[item].values.tolist()
+			# item_data = " ".join(item_data)
+		else:
+			item_data = traj[item].values.tolist()
+
+		return item_data
+
+	def read_types(self):
+		types  = self.read_item("type")
+		types, index = np.unique(np.array(types),return_index=True)
+		types = types[np.argsort(index)].tolist()
+		return types
+
+	def read_elements(self):
+		elements  = self.read_item("element")
+		elements, index = np.unique(np.array(elements),return_index=True)
+		elements = elements[np.argsort(index)].tolist()
+		return elements
 
 	def read_box(self,nframe):
 		"""
@@ -500,27 +552,7 @@ class ReadLammpsTraj(object):
 		rho = total_mass/vol
 		return rho
 
-	def read_num_of_frames(self):
-		natoms = self.natoms
-		inputfile = self.f
-		with open(inputfile,"r") as f:
-			lines = f.readlines()
-		total_nframe = int(len(lines)/(natoms+9))
 
-		return total_nframe
-
-
-	def read_steps(self):
-		total_nframe = self.read_num_of_frames()
-		natoms = self.natoms
-		inputfile = self.f
-		steps = []
-		with open(inputfile,"r") as f:
-			for index, line in enumerate(f):
-				for j in range(total_nframe):
-					if index == (natoms+9)*j+1:
-						steps.append(int(line.strip()))
-		return steps
 
 
 if __name__ == "__main__":
@@ -534,5 +566,5 @@ if __name__ == "__main__":
 	# print(x)
 	# rho = rlt.calc_bulk_density(3,modify={"C": 16.043})
 	# print(rho)
-	# steps = rlt.read_steps()
-	print(steps)
+	# elements = rlt.read_types()
+	# print(elements)
