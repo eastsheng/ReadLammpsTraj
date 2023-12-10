@@ -500,6 +500,28 @@ class ReadLammpsTraj(object):
 		rho = total_mass/vol
 		return rho
 
+	def read_num_of_frames(self):
+		natoms = self.natoms
+		inputfile = self.f
+		with open(inputfile,"r") as f:
+			lines = f.readlines()
+		total_nframe = int(len(lines)/(natoms+9))
+
+		return total_nframe
+
+
+	def read_steps(self):
+		total_nframe = self.read_num_of_frames()
+		natoms = self.natoms
+		inputfile = self.f
+		steps = []
+		with open(inputfile,"r") as f:
+			for index, line in enumerate(f):
+				for j in range(total_nframe):
+					if index == (natoms+9)*j+1:
+						steps.append(int(line.strip()))
+		return steps
+
 
 if __name__ == "__main__":
 	__print_version__()
@@ -512,3 +534,5 @@ if __name__ == "__main__":
 	# print(x)
 	# rho = rlt.calc_bulk_density(3,modify={"C": 16.043})
 	# print(rho)
+	# steps = rlt.read_steps()
+	print(steps)
