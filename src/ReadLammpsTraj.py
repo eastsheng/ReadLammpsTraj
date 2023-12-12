@@ -127,6 +127,7 @@ class ReadLammpsTraj(object):
 		traj = pd.DataFrame(traj,columns=self.col)
 		traj["id"] = pd.to_numeric(traj["id"],errors='coerce').astype("Int64")
 		traj = traj.sort_values(by="id")
+		traj.set_index('id', inplace=True, drop=False)
 		return traj
 
 	def read_num_of_frames(self):
@@ -568,3 +569,5 @@ if __name__ == "__main__":
 	# print(rho)
 	# elements = rlt.read_types()
 	# print(elements)
+	x = rlt.read_traj(0)
+	print(x)
