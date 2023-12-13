@@ -98,6 +98,7 @@ class ReadLammpsTraj(object):
 		self.f = f
 		self.amu2g = 6.02214076208112e23
 		self.A2CM = 1e-8 
+		self.read_info()
 
 	def read_info(self,):
 		header = []
@@ -590,10 +591,10 @@ class ReadLammpsTraj(object):
 
 if __name__ == "__main__":
 	__print_version__()
-	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
-	rlt = ReadLammpsTraj(lammpstrj)
-	rlt.read_info()
+	# lammpstrj = "traj_npt_relax_260_1.lammpstrj"
+	# rlt = ReadLammpsTraj(lammpstrj)
 	# box = rlt.read_box(0)
+	# print(box)
 	# rlt.dividing(box["ylo"],box["yhi"],1.0)
 	# x = rlt.read_xyz(0)
 	# print(x)
