@@ -106,17 +106,22 @@ class ReadLammpsTraj(object):
 			for line in islice(f, 0, 9):
 				header.append(line)
 		self.natoms = int(header[3])
-		header0 = self.read_header(0)
-		header1 = self.read_header(1)
-		self.step_inter = int(header1[1])-int(header0[1])
+		try:
+			header0 = self.read_header(0)
+			header1 = self.read_header(1)
+			self.step_inter = int(header1[1])-int(header0[1])
+		except:
+			self.step_inter = 1
+			print(">>> Warning: No extra frames for 'step_inter'...")
 		self.col = header0[8].strip().split()[2:]
+
 		box = self.read_box(0)
 		self.xlo,self.xhi = box["xhi"], box["xlo"]
 		self.ylo,self.yhi = box["yhi"], box["ylo"]
 		self.zlo,self.zhi = box["zhi"], box["zlo"]
-		self.Lx = self.xhi-self.xlo
-		self.Ly = self.yhi-self.ylo
-		self.Lz = self.zhi-self.zlo
+		self.Lx = abs(self.xhi-self.xlo)
+		self.Ly = abs(self.yhi-self.ylo)
+		self.Lz = abs(self.zhi-self.zlo)
 		return self.step_inter, self.natoms, self.Lx, self.Ly, self.Lz
 
 	def read_header(self,nframe):
@@ -143,6 +148,7 @@ class ReadLammpsTraj(object):
 		"""
 		skip = 9*(nframe+1)+self.natoms*(nframe)
 		traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.natoms,dtype="str")
+		print(traj)
 		traj = pd.DataFrame(traj,columns=self.col)
 		traj["id"] = pd.to_numeric(traj["id"],errors='coerce').astype("Int64")
 		traj = traj.sort_values(by="id")
@@ -227,6 +233,12 @@ class ReadLammpsTraj(object):
 		}
 		return box
 
+	def read_lengths(self,nframe):
+		box = self.read_box(nframe)
+		lx = abs(box["xhi"]-box["xlo"])
+		ly = abs(box["yhi"]-box["ylo"])
+		lz = abs(box["zhi"]-box["zlo"])
+		return lx, ly, lz
 
 	def read_vol(self,nframe):
 		"""
@@ -235,10 +247,7 @@ class ReadLammpsTraj(object):
 		nframe: number of frame
 		Return a vol value unit/A^3
 		"""
-		box = self.read_box(nframe)
-		lx = box["xhi"]-box["xlo"]
-		ly = box["yhi"]-box["ylo"]
-		lz = box["zhi"]-box["zlo"]
+		lx, ly, lz = self.read_lengths(nframe)
 		vol = lx*ly*lz
 		return  vol
 
@@ -316,37 +325,43 @@ class ReadLammpsTraj(object):
 		
 		return
 
-	def oneframe_alldensity(self,mxyz,Nbin,mass_dict={},density_type="mass",direction="z"):
+	def oneframe_alldensity(self,nframe,mxyz,Nbin,mass_dict=False,density_type="mass",direction="z"):
 		"""
 		calculating density of all atoms......
 		mxyz: array of mass, x, y, and z;
 		Nbin: number of bins in x/y/z-axis
-		mass_dict: masses of atoms ,default={} 
+		mass_dict: masses of atoms ,default=False
 		density_type: calculated type of density 
 		"""
 
 		unitconvert = self.amu2g*(self.A2CM)**3
-		if direction=="z" or direction=="Z":
-			dr = self.Lz/Nbin #z方向bin
-			L = mxyz[:,3]
-			lo = self.zlo
-			vlo = (self.Lx*self.Ly*dr)*unitconvert
-		elif direction=="y" or direction=="Y":
-			dr = self.Ly/Nbin
-			L = mxyz[:,2]
-			lo = self.ylo
-			vlo = (self.Lx*self.Lz*dr)*unitconvert
-		elif direction=="x" or direction=="X":
-			dr = self.Lx/Nbin
-			L = mxyz[:,1]
-			lo = self.xlo
-			vlo = (self.Ly*self.Lz*dr)*unitconvert
+		box = self.read_box(nframe)
+		Lx,Ly,Lz = self.read_lengths(nframe)
+		xlo, xhi = box["xlo"], box["xhi"]
+		ylo, yhi = box["ylo"], box["yhi"]
+		zlo, zhi = box["zlo"], box["zhi"]
 
-		mass_key=list(mass_dict.keys())
-		for i in range(len(self.atom)):
-			for j in range(len(mass_key)):
-				if self.atom[i] == mass_key[j]:
-					mxyz[i,0] = mass_dict[mass_key[j]]
+		if direction=="z" or direction=="Z":
+			dr = Lz/Nbin #z方向bin
+			L = mxyz[:,3]
+			lo = zlo
+			vlo = (Lx*Ly*dr)*unitconvert
+		elif direction=="y" or direction=="Y":
+			dr = Ly/Nbin
+			L = mxyz[:,2]
+			lo = ylo
+			vlo = (Lx*Lz*dr)*unitconvert
+		elif direction=="x" or direction=="X":
+			dr = Lx/Nbin
+			L = mxyz[:,1]
+			lo = xlo
+			vlo = (Ly*Lz*dr)*unitconvert
+		if mass_dict:
+			mass_key=list(mass_dict.keys())
+			for i in range(len(self.atom)):
+				for j in range(len(mass_key)):
+					if self.atom[i] == mass_key[j]:
+						mxyz[i,0] = mass_dict[mass_key[j]]
 		MW = mxyz[:,0] #相对分子质量
 
 		if np.all(MW==0):
@@ -377,39 +392,48 @@ class ReadLammpsTraj(object):
 
 		return lc_n,rho_n
 
-	def oneframe_moldensity(self,mxyz,Nbin,id_range,mass_dict={},id_type="mol",density_type="mass",direction="z"):
+	def oneframe_moldensity(self,nframe,mxyz,Nbin,id_range,mass_dict=False,id_type="mol",density_type="mass",direction="z"):
 		"""
 		calculating density of some molecules......
 		mxyz: array of mass, x, y, and z;
 		Nbin: number of bins in x/y/z-axis
 		id_range: range of molecule/atom id;
-		mass_dict: masses of atoms ,default={} 
+		mass_dict: masses of atoms ,default=False
 		id_type: according to the molecule/atom id, to recognize atoms, args: mol, atom
 		density_type: calculated type of density 
 		"""
+		
 		unitconvert = self.amu2g*(self.A2CM)**3
-		if direction=="z" or direction=="Z":
-			dr = self.Lz/Nbin #z方向bin
-			L = mxyz[:,3]
-			lo = self.zlo
-			vlo = (self.Lx*self.Ly*dr)*unitconvert
-		elif direction=="y" or direction=="Y":
-			dr = self.Ly/Nbin
-			L = mxyz[:,2]
-			lo = self.ylo
-			vlo = (self.Lx*self.Lz*dr)*unitconvert
-		elif direction=="x" or direction=="X":
-			dr = self.Lx/Nbin
-			L = mxyz[:,1]
-			lo = self.xlo
-			vlo = (self.Ly*self.Lz*dr)*unitconvert
+		
+		box = self.read_box(nframe)
+		
+		Lx,Ly,Lz = self.read_lengths(nframe)
+		xlo, xhi = box["xlo"], box["xhi"]
+		ylo, yhi = box["ylo"], box["yhi"]
+		zlo, zhi = box["zlo"], box["zhi"]
 
-		mass_key=list(mass_dict.keys())
-		for i in range(len(self.atom)):
-			for j in range(len(mass_key)):
-				if self.atom[i] == mass_key[j]:
-					mxyz[i,0] = mass_dict[mass_key[j]]
-		MW = mxyz[:,0] #相对分子质量
+		if direction=="z" or direction=="Z":
+			dr = Lz/Nbin #z方向bin
+			L = mxyz[:,3]
+			lo = zlo
+			vlo = (Lx*Ly*dr)*unitconvert
+		elif direction=="y" or direction=="Y":
+			dr = Ly/Nbin
+			L = mxyz[:,2]
+			lo = ylo
+			vlo = (Lx*Lz*dr)*unitconvert
+		elif direction=="x" or direction=="X":
+			dr = Lx/Nbin
+			L = mxyz[:,1]
+			lo = xlo
+			vlo = (Ly*Lz*dr)*unitconvert
+		if mass_dict:
+			mass_key=list(mass_dict.keys())
+			for i in range(len(self.atom)):
+				for j in range(len(mass_key)):
+					if self.atom[i] == mass_key[j]:
+						mxyz[i,0] = mass_dict[mass_key[j]]
+		MW = mxyz[:,0] # 相对分子质量
 		if np.all(MW==0):
 			density_type = "number"
 			print("\nNo provided mass, will calculate number density!\n")
@@ -445,8 +469,9 @@ class ReadLammpsTraj(object):
 		rho_n = np.array(rho_n).reshape(-1,1)	
 		return lc_n,rho_n
 
-	def TwoD_Density(self,mxyz,atomtype_n,Nx=1,Ny=1,Nz=1,mass_or_number="mass",id_type="mol"):
+	def TwoD_Density(self,nframe,mxyz,atomtype_n,Nx=1,Ny=1,Nz=1,mass_or_number="mass",id_type="mol"):
 		'''
+		nframe: n-th frame
 		mxyz: mass x y z
 		natoms: tot number of atoms
 		atomtype_n: type of molecules,list,natoms=[1,36], the 1 is the first atom type and 36 is the last one atom type
@@ -456,9 +481,16 @@ class ReadLammpsTraj(object):
 		id_type:"mol" or "atom" for atomtype_n
 		'''
 		unitconvert = self.amu2g*(self.A2CM)**3
-		dX = self.Lx/Nx #x方向bin
-		dY = self.Ly/Ny #y方向bin
-		dZ = self.Lz/Nz #z方向bin
+		box = self.read_box(nframe)
+		Lx,Ly,Lz = self.read_lengths(nframe)
+		xlo, xhi = box["xlo"], box["xhi"]
+		ylo, yhi = box["ylo"], box["yhi"]
+		zlo, zhi = box["zlo"], box["zhi"]
+
+		dX = Lx/Nx #x方向bin
+		dY = Ly/Ny #y方向bin
+		dZ = Lz/Nz #z方向bin
+
 		MW = mxyz[:,0] #相对分子质量
 		X = mxyz[:,1] #x
 		Y = mxyz[:,2] #y
@@ -470,22 +502,22 @@ class ReadLammpsTraj(object):
 		xc_n,yc_n,zc_n = [],[],[]
 		rho_n = [] #average density list in every bins
 		for xi in tqdm(range(Nx)):
-			x0 = self.xlo+dX*xi #down coord of bin
-			x1 = self.xlo+dX*(xi+1) #down coord of bin
+			x0 = xlo+dX*xi #down coord of bin
+			x1 = xlo+dX*(xi+1) #down coord of bin
 			xc = (x0+x1)*0.5
 			xc_n.append(xc)
 			# print(xi,'---Nx:---',Nx)
 			for yi in range(Ny):
 				# print(yi,'---Ny:---',Ny)
-				y0 = self.ylo+dY*yi #down coord of bin
-				y1 = self.ylo+dY*(yi+1) #down coord of bin
+				y0 = ylo+dY*yi #down coord of bin
+				y1 = ylo+dY*(yi+1) #down coord of bin
 				yc = (y0+y1)*0.5
 				# print(yc)
 				yc_n.append(yc)
 				for zi in range(Nz):
 					# print(zi,'---Nz:---',Nz)
-					z0 = self.zlo+dZ*zi #down coord of bin
-					z1 = self.zlo+dZ*(zi+1) #down coord of bin
+					z0 = zlo+dZ*zi #down coord of bin
+					z1 = zlo+dZ*(zi+1) #down coord of bin
 					zc = (z0+z1)*0.5
 					zc_n.append(zc)
 		

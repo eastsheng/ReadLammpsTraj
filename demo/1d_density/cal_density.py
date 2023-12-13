@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import ReadLammpsTraj as RLT
 from pathlib import Path
 import periodictable as pt
+import fastdataing as fd
 
 def cal_density():
 	path = "./"
@@ -13,12 +14,12 @@ def cal_density():
 	Path(path+"imgs/").mkdir(parents=True,exist_ok=True)
 
 	md = RLT.ReadLammpsTraj(path+f)
-	md.read_info()
+	# md.read_info()
 	# # number of frames
-	mframe,nframe = 1, 1
+	mframe,nframe = 0, 0
 	# # chunk number in z
 	Nz = 100
-	id_range = [1,10000]
+	id_range = [1,30]
 	# # element mass
 	# O_mass = pt.elements.symbol('O').mass
 	# H_mass = pt.elements.symbol('H').mass
@@ -35,9 +36,9 @@ def cal_density():
 		rho_nframe = np.zeros(Nz).reshape(Nz,1)
 		for i in range(mframe,nframe+1):
 			position = md.read_mxyz(i)
-			# z, rho = md.oneframe_alldensity(position,Nz,mass_dict,density_type="mass",direction=direction)
-			z, rho = md.oneframe_moldensity(position,Nz,id_range,mass_dict,id_type="atom",density_type="mass",direction=direction)
-
+			# print(position)
+			# z, rho = md.oneframe_alldensity(i,position,Nz,mass_dict,density_type="mass",direction=direction)
+			z, rho = md.oneframe_moldensity(i,position,Nz,id_range,mass_dict,id_type="atom",density_type="mass",direction=direction)
 			rho_nframe = rho_nframe+rho
 
 			print(i,"---",nframe)
@@ -45,20 +46,17 @@ def cal_density():
 		rho=rho_nframe/nf #all
 		print("Average density =",rho.mean(),"g/mL")
 	#---- end ----------------------------------------------
-	plt.rc('font', family='Times New Roman', size=26)
-	fig = plt.figure(figsize=(12,8))
-	fig.subplots_adjust(bottom=0.2,left=0.2)
-	ax=fig.add_subplot(111)
+	ax = fd.add_ax(fd.add_fig())
 	ax.plot(z,rho,'r--',label='All',linewidth=2)
 
 	# ax.legend(loc="center")
 	ax.legend(loc="best")
 
-	ax.set_ylabel('Density(g/mL)',fontweight='bold',size=32)
-	ax.set_xlabel('z(Å)',fontweight='bold',size=32)	
+	ax.set_ylabel('Density (g/mL)',fontweight='normal',size=22)
+	ax.set_xlabel('z (Å)',fontweight='normal',size=22)	
 	# ax.set_ylim(-0.05,1.5)
 
-	# plt.savefig(path+"imgs/density.png",dpi=300)
+	plt.savefig(path+"imgs/density.png",dpi=300)
 	plt.show()
 
 
