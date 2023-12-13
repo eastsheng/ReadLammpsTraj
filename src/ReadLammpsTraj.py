@@ -9,7 +9,7 @@ import periodictable as pt
 import time
 
 def __version__():
-	version = "1.2.0"
+	version = "1.2.1"
 	return version
 
 def print_line(func):
@@ -148,7 +148,6 @@ class ReadLammpsTraj(object):
 		"""
 		skip = 9*(nframe+1)+self.natoms*(nframe)
 		traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.natoms,dtype="str")
-		print(traj)
 		traj = pd.DataFrame(traj,columns=self.col)
 		traj["id"] = pd.to_numeric(traj["id"],errors='coerce').astype("Int64")
 		traj = traj.sort_values(by="id")
