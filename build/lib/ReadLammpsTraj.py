@@ -13,19 +13,19 @@ def __version__():
 	return version
 
 def print_line(func):
-    
-    def wrapper(*args, **kwargs):
-        print(21*"-"," Program Start ",21*"-")
-        start_time = time.time()
-        results = func(*args, **kwargs)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        print(20*"-","Run time:",round(elapsed_time,2),"s ",20*"-")
-        return results
-    return wrapper
+	
+	def wrapper(*args, **kwargs):
+		print(21*"-"," Program Start ",21*"-")
+		start_time = time.time()
+		results = func(*args, **kwargs)
+		end_time = time.time()
+		elapsed_time = end_time - start_time
+		print(20*"-","Run time:",round(elapsed_time,2),"s ",20*"-")
+		return results
+	return wrapper
 
 def __print_version__():
-    cloud = [
+	cloud = [
 			"______                   _    _       _____                 _ ",
 			"| ___ \                 | |  | |     |_   _|               (_)",
 			"| |_/ /  ___   __ _   __| |  | |       | |   _ __   __ _    _ ",
@@ -34,18 +34,18 @@ def __print_version__():
 			"\_| \_| \___| \__,_| \__,_|  \_____/   \_/  |_|    \__,_|  | |",
 			"                                                          _/ |",
 			"                                                         |__/ ",
-    ]
-    n = 32
-    print(n*"- ")
-    print(n*". ")
-    for line in cloud:
-        print(line)
-    version = __version__()
-    print('@ReadLammpsTraj-'+version,", Good Luck!")
-    print(n*". ")
-    print(n*"- ")
-    current_datetime = datetime.datetime.now()
-    return print("Time:",current_datetime)
+	]
+	n = 32
+	print(n*"- ")
+	print(n*". ")
+	for line in cloud:
+		print(line)
+	version = __version__()
+	print('@ReadLammpsTraj-'+version,", Good Luck!")
+	print(n*". ")
+	print(n*"- ")
+	current_datetime = datetime.datetime.now()
+	return print("Time:",current_datetime)
 
 
 def element2mass(elements,modify=False):
@@ -71,6 +71,24 @@ def element2mass(elements,modify=False):
 						else:
 							masses.append(elementj.mass)
 	return masses
+
+
+
+def array2str(array):
+	"""
+	convert a array to string format for writing directly. 
+	array: a array
+	"""
+
+	array = array.astype(str)
+
+	string = ""
+
+	for row in array:
+		string += "  ".join(row)+"\n"
+	string = "\n"+string+"\n"
+	
+	return string
 
 
 class ReadLammpsTraj(object):
@@ -128,6 +146,7 @@ class ReadLammpsTraj(object):
 		traj["id"] = pd.to_numeric(traj["id"],errors='coerce').astype("Int64")
 		traj = traj.sort_values(by="id")
 		traj.set_index('id', inplace=True, drop=False)
+		traj.index = traj.index - 1
 		return traj
 
 	def read_num_of_frames(self):
@@ -281,6 +300,20 @@ class ReadLammpsTraj(object):
 		mxyz = np.hstack((mass_array,xyz))
 		return mxyz
 
+	def dump(self,nframe,dumpfile=False):
+		header = self.read_header(nframe)
+		traj = self.read_traj(nframe).values
+		header = "".join(header).strip()
+		traj = array2str(traj)
+		if dumpfile:
+			dumpfile = dumpfile
+		else:
+			dumpfile = f"{nframe}.lammpstrj"
+		with open(dumpfile,"w") as f:
+			f.write(header)
+			f.write(traj)
+		
+		return
 
 	def oneframe_alldensity(self,mxyz,Nbin,mass_dict={},density_type="mass",direction="z"):
 		"""
@@ -555,7 +588,6 @@ class ReadLammpsTraj(object):
 
 
 
-
 if __name__ == "__main__":
 	__print_version__()
 	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
@@ -569,5 +601,4 @@ if __name__ == "__main__":
 	# print(rho)
 	# elements = rlt.read_types()
 	# print(elements)
-	x = rlt.read_traj(0)
-	print(x)
+	# rlt.dump(0)
