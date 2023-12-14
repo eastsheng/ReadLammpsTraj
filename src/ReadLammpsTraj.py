@@ -9,7 +9,7 @@ import periodictable as pt
 import time
 
 def __version__():
-	version = "1.2.1"
+	version = "1.2.2"
 	return version
 
 def print_line(func):
@@ -152,6 +152,7 @@ class ReadLammpsTraj(object):
 		traj["id"] = pd.to_numeric(traj["id"],errors='coerce').astype("Int64")
 		traj = traj.sort_values(by="id")
 		traj.set_index('id', inplace=True, drop=False)
+		traj.rename_axis('', inplace=True)
 		traj.index = traj.index - 1
 		return traj
 
@@ -622,15 +623,9 @@ class ReadLammpsTraj(object):
 
 if __name__ == "__main__":
 	__print_version__()
-	# lammpstrj = "traj_npt_relax_260_1.lammpstrj"
-	# rlt = ReadLammpsTraj(lammpstrj)
-	# box = rlt.read_box(0)
-	# print(box)
-	# rlt.dividing(box["ylo"],box["yhi"],1.0)
-	# x = rlt.read_xyz(0)
-	# print(x)
-	# rho = rlt.calc_bulk_density(3,modify={"C": 16.043})
-	# print(rho)
-	# elements = rlt.read_types()
-	# print(elements)
-	# rlt.dump(0)
+	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
+	rlt = ReadLammpsTraj(lammpstrj)
+	traj = rlt.read_traj(0)
+	traj = traj.sort_values(by="id",ascending=True)
+	print(traj)
+	
