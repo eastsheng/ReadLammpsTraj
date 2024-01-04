@@ -593,15 +593,8 @@ class ReadLammpsTraj(object):
 
 
 	def dividing(self,L0,L1,lbin):
-		n = int((L1-L0)/lbin)
-		if n % 2 == 0:
-			pass
-		else:
-			n = n+1
-		nLs = np.linspace(L0,L1,n)
-		# nLs = nLs.reshape(-1,2)
+		nLs = np.arange(L0, L1, lbin)
 		matrix = np.array([[nLs[i], nLs[i + 1]] for i in range(len(nLs) - 1)])
-
 		return matrix
 
 
