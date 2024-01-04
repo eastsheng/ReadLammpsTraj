@@ -599,9 +599,10 @@ class ReadLammpsTraj(object):
 		else:
 			n = n+1
 		nLs = np.linspace(L0,L1,n)
-		nLs = nLs.reshape(-1,2)
+		# nLs = nLs.reshape(-1,2)
+		matrix = np.array([[nLs[i], nLs[i + 1]] for i in range(len(nLs) - 1)])
 
-		return nLs
+		return matrix
 
 
 	def calc_bulk_density(self, nframe, modify=False):
@@ -625,7 +626,8 @@ if __name__ == "__main__":
 	__print_version__()
 	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
 	rlt = ReadLammpsTraj(lammpstrj)
-	traj = rlt.read_traj(0)
-	traj = traj.sort_values(by="id",ascending=True)
-	print(traj)
-	
+	# traj = rlt.read_traj(0)
+	# traj = traj.sort_values(by="id",ascending=True)
+	# print(traj)
+	# ranges = rlt.dividing(1,10,1)
+	# print(ranges)
