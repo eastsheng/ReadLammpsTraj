@@ -340,18 +340,18 @@ class ReadLammpsTraj(object):
 		xlo, xhi = box["xlo"], box["xhi"]
 		ylo, yhi = box["ylo"], box["yhi"]
 		zlo, zhi = box["zlo"], box["zhi"]
-
-		if direction=="z" or direction=="Z":
+		direction = direction.lower()
+		if direction=="z":
 			dr = Lz/Nbin #z方向bin
 			L = mxyz[:,3]
 			lo = zlo
 			vlo = (Lx*Ly*dr)*unitconvert
-		elif direction=="y" or direction=="Y":
+		elif direction=="y":
 			dr = Ly/Nbin
 			L = mxyz[:,2]
 			lo = ylo
 			vlo = (Lx*Lz*dr)*unitconvert
-		elif direction=="x" or direction=="X":
+		elif direction=="x":
 			dr = Lx/Nbin
 			L = mxyz[:,1]
 			lo = xlo
@@ -411,18 +411,18 @@ class ReadLammpsTraj(object):
 		xlo, xhi = box["xlo"], box["xhi"]
 		ylo, yhi = box["ylo"], box["yhi"]
 		zlo, zhi = box["zlo"], box["zhi"]
-
-		if direction=="z" or direction=="Z":
+		direction = direction.lower()
+		if direction=="z":
 			dr = Lz/Nbin #z方向bin
 			L = mxyz[:,3]
 			lo = zlo
 			vlo = (Lx*Ly*dr)*unitconvert
-		elif direction=="y" or direction=="Y":
+		elif direction=="y":
 			dr = Ly/Nbin
 			L = mxyz[:,2]
 			lo = ylo
 			vlo = (Lx*Lz*dr)*unitconvert
-		elif direction=="x" or direction=="X":
+		elif direction=="x":
 			dr = Lx/Nbin
 			L = mxyz[:,1]
 			lo = xlo
@@ -565,6 +565,7 @@ class ReadLammpsTraj(object):
 			dr = dr
 		return dr
 		
+
 	def zoning(self,sorted_traj,axis_range,direc="y"):
 		"""
 		Divide a coordinate interval along a direction, such as, x or y or z
@@ -572,22 +573,10 @@ class ReadLammpsTraj(object):
 		axis_range: Divide interval, a list, such as, axis_range = [0,3.5], unit/Angstrom
 		direc: The direction to be divided, default direc="y"
 		"""
-		m,n = sorted_traj.shape
-		if direc=="X":
-			direc = "x"
-		elif direc=="Y":
-			direc = "y"
-		elif direc=="Z":
-			direc = "z"
-		else:
-			direc = "y"
 		# whether in the interval
+		direc = direc.lower()
 		condition1 = (sorted_traj[direc].between(axis_range[0],axis_range[1]))
 		sorted_zoning_traj = sorted_traj[condition1]
-		# Whether it's the same molecule
-		mols = sorted_zoning_traj["mol"]
-		condition2 = (sorted_traj["mol"].isin(mols))
-		sorted_zoning_traj = sorted_traj[condition2]
 
 		return sorted_zoning_traj
 
