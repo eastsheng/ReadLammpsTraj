@@ -56,7 +56,7 @@ def cal_density():
 	ax.set_xlabel('z (Å)',fontweight='normal',size=22)	
 	# ax.set_ylim(-0.05,1.5)
 
-	plt.savefig(path+"imgs/density.png",dpi=300)
+	# plt.savefig(path+"imgs/density.png",dpi=300)
 	plt.show()
 
 

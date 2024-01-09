@@ -581,6 +581,48 @@ class ReadLammpsTraj(object):
 		return sorted_zoning_traj
 
 
+	def zoning_molecule(self,sorted_traj,axis_range,direc="y"):
+		"""
+		Divide a coordinate interval along a direction, such as, x or y or z
+		sorted_traj: sorted lammps traj, pandas dataframe format, it includes at least 'id mol type x y z'
+		axis_range: Divide interval, a list, such as, axis_range = [0,3.5], unit/Angstrom
+		direc: The direction to be divided, default direc="y"
+		"""
+		# whether in the interval
+		direc = direc.lower()
+		condition1 = (sorted_traj[direc].between(axis_range[0],axis_range[1]))
+		sorted_zoning_traj = sorted_traj[condition1]
+		# Whether it's the same molecule
+		mols = sorted_zoning_traj["mol"]
+		condition2 = (sorted_traj["mol"].isin(mols))
+		sorted_zoning_traj = sorted_traj[condition2]
+		return sorted_zoning_traj
+
+
+	def zoning_water_in_hydrate(self,sorted_traj,axis_range,direc="y"):
+		"""
+		Divide a coordinate interval along a direction, such as, x or y or z for hydrate/water big molecules
+		sorted_traj: sorted lammps traj, pandas dataframe format, it includes at least 'id mol type x y z'
+		axis_range: Divide interval, a list, such as, axis_range = [0,3.5], unit/Angstrom
+		direc: The direction to be divided, default direc="y"
+		"""
+		# whether in the interval
+		direc = direc.lower()
+		condition1 = (sorted_traj[direc].between(axis_range[0],axis_range[1]))
+		sorted_zoning_traj = sorted_traj[condition1] # select H2O between axis_range0 and axis_range1, but there are some abnormal water
+		condition2 = (sorted_zoning_traj["type"] == 1) # select O atoms in axis_range
+		selected_O = sorted_zoning_traj[condition2]
+		ids = selected_O["id"]
+		def expand_element(element):
+			return [element, element + 1, element + 2]
+		expanded_data = ids.map(expand_element)
+		ids = pd.Series([item for sublist in expanded_data for item in sublist])
+		# print(ids)
+		condition3 = (sorted_traj["id"].isin(ids)) 
+		water_inaxis_range = sorted_traj[condition3]
+		return water_inaxis_range
+
+
 	def dividing(self,L0,L1,lbin):
 		nLs = np.arange(L0, L1, lbin)
 		matrix = np.array([[nLs[i], nLs[i + 1]] for i in range(len(nLs) - 1)])
