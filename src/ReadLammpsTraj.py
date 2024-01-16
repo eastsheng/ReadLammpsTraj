@@ -90,6 +90,28 @@ def array2str(array):
 	
 	return string
 
+def boundary(dVect, lx, ly, lz):
+	boundaries = np.array([lx, ly, lz]) * 0.5
+	dVect = np.where(dVect >= boundaries, dVect - boundaries * 2, np.where(dVect <= -boundaries, dVect + boundaries * 2, dVect))
+	return dVect
+
+def select_atoms(iframe,atomtype):
+	condition = (iframe['type'].astype(int).isin(atomtype))
+	df_select = iframe[condition]
+	xyz = df_select[["x","y","z"]].values.astype(float)
+	return xyz
+
+def unwrap_coordinates(xyzs, lx, ly, lz):
+	# Unwrap xyzs based on box vectors
+	nf, m, n = xyzs.shape
+	for i in tqdm(range(1, nf),desc="Unwrap coordinates"):
+		displacement = xyzs[i] - xyzs[i-1]
+		dVect = boundary(displacement,lx,ly,lz)
+		for j in range(n):
+			xyzs[i] = xyzs[i-1] + dVect
+	return xyzs
+
+
 
 class ReadLammpsTraj(object):
 	"""Read lammps trajectory file"""
@@ -155,6 +177,7 @@ class ReadLammpsTraj(object):
 		traj.rename_axis('', inplace=True)
 		traj.index = traj.index - 1
 		return traj
+
 
 	def read_num_of_frames(self):
 		natoms = self.natoms
@@ -645,13 +668,64 @@ class ReadLammpsTraj(object):
 		return rho
 
 
+	@print_line
+	def msd(self,inputfile,atomtype,mframe,nframe,interval,outputfile=False):
+		"""
+		calculating msd
+		Parameters:
+		- inputfile: inputfile
+		- outputfile: msd file
+		"""
+		# trj = rlt.ReadLammpsTraj(trjfile)
+		box = self.read_box(mframe)
+		lx = box["xhi"]-box["xlo"]
+		ly = box["yhi"]-box["ylo"]
+		lz = box["zhi"]-box["zlo"]
+		# 1. load select atom position
+		xyzs = []
+		for i in tqdm(range(mframe,nframe,interval),desc="Reading positions"):
+			iframe = self.read_traj(i)
+			xyz_i = select_atoms(iframe,atomtype).tolist()
+			xyzs.append(xyz_i)
+		xyzs = np.array(xyzs)
+		# print(xyzs.shape)
+		xyzs = unwrap_coordinates(xyzs, lx, ly, lz)
+
+		nf, m, n=xyzs.shape
+		# 2. calculating msd
+		t = [0]
+		msd_x, msd_y, msd_z, msd = [0], [0], [0], [0]
+		lagtimes = np.arange(1, nf)
+		for i in tqdm(lagtimes,desc="Calculating MSD"):
+			dists = 0
+			disp = xyzs[:-i,:,:] - xyzs[i:,:,:]
+			# disp = boundary(disp,lx,ly,lz)
+			sqdist = np.square(disp)
+			dist = np.mean(sqdist,axis=0) # 平均lagtimes
+			dist = np.mean(dist,axis=0) # 平均原子
+			t.append(i*interval)
+			msd_x.append(dist[0])
+			msd_y.append(dist[1])
+			msd_z.append(dist[2])
+			msd.append(np.sum(dist))
+
+		tmsd = np.array([t,msd_x,msd_y,msd_z,msd]).T
+
+		if outputfile == False:
+			outputfile = "msd.dat"
+		np.savetxt(outputfile,tmsd,fmt="%f")
+		return tmsd
+
+
+
 
 if __name__ == "__main__":
 	__print_version__()
 	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
 	rlt = ReadLammpsTraj(lammpstrj)
-	# traj = rlt.read_traj(0)
+	traj = rlt.read_traj(0)
 	# traj = traj.sort_values(by="id",ascending=True)
-	# print(traj)
+	print(traj)
 	# ranges = rlt.dividing(1,10,1)
 	# print(ranges)
+	# rlt.msd(lammpstrj,atomtype=[1,2],mframe=0,nframe=3,interval=1,outputfile=False)
