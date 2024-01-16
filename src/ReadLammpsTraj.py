@@ -90,9 +90,46 @@ def array2str(array):
 	
 	return string
 
+def unwrap_coordinates(xyzs, lx, ly, lz):
+	# Unwrap xyzs based on box vectors
+	nf, m, n = xyzs.shape
+	# for i in tqdm(range(1, nf),desc="Unwrap coordinates"):
+	for i in range(1, nf):
+		displacement = xyzs[i] - xyzs[i-1]
+		dVect = boundary(displacement,lx,ly,lz)
+		for j in range(n):
+			xyzs[i] = xyzs[i-1] + dVect
+	return xyzs
+
 def boundary(dVect, lx, ly, lz):
 	boundaries = np.array([lx, ly, lz]) * 0.5
 	dVect = np.where(dVect >= boundaries, dVect - boundaries * 2, np.where(dVect <= -boundaries, dVect + boundaries * 2, dVect))
+	# m, n = dVect.shape
+	# lx2 = lx/2
+	# ly2 = ly/2
+	# lz2 = lz/2
+	# for i in range(1,m):
+	# 	if dVect[i][0] > lx2:
+	# 		while dVect[i][0] > lx2:
+	# 			dVect[i][0] -= lx
+	# 	elif dVect[i][0] < -lx2:
+	# 		while dVect[i][0] < -lx2:
+	# 			dVect[i][0] += lx
+	
+	# 	if dVect[i][1] > lx2:
+	# 		while dVect[i][1] > ly2:
+	# 			dVect[i][1] -= ly
+	# 	elif dVect[i][1] < -ly2:
+	# 		while dVect[i][1] < -ly2:
+	# 			dVect[i][1] += ly
+	
+	# 	if dVect[i][2] > lz2:
+	# 		while dVect[i][2] > lz2:
+	# 			dVect[i][2] -= lz
+	# 	elif dVect[i][2] < -lz2:
+	# 		while dVect[i][2] < -lz2:
+	# 			dVect[i][2] += lz
+	
 	return dVect
 
 def select_atoms(iframe,atomtype):
@@ -100,17 +137,6 @@ def select_atoms(iframe,atomtype):
 	df_select = iframe[condition]
 	xyz = df_select[["x","y","z"]].values.astype(float)
 	return xyz
-
-def unwrap_coordinates(xyzs, lx, ly, lz):
-	# Unwrap xyzs based on box vectors
-	nf, m, n = xyzs.shape
-	for i in tqdm(range(1, nf),desc="Unwrap coordinates"):
-		displacement = xyzs[i] - xyzs[i-1]
-		dVect = boundary(displacement,lx,ly,lz)
-		for j in range(n):
-			xyzs[i] = xyzs[i-1] + dVect
-	return xyzs
-
 
 
 class ReadLammpsTraj(object):
@@ -177,7 +203,6 @@ class ReadLammpsTraj(object):
 		traj.rename_axis('', inplace=True)
 		traj.index = traj.index - 1
 		return traj
-
 
 	def read_num_of_frames(self):
 		natoms = self.natoms
@@ -347,6 +372,7 @@ class ReadLammpsTraj(object):
 			f.write(traj)
 		
 		return
+
 
 	def oneframe_alldensity(self,nframe,mxyz,Nbin,mass_dict=False,density_type="mass",direction="z"):
 		"""
@@ -580,14 +606,6 @@ class ReadLammpsTraj(object):
 
 		return xc_n,yc_n,zc_n,rho_nxyz
 
-	def unwrap(self,dn,dm,Lr):
-		dr = dn-dm
-		if abs(dr) > 0.5*Lr:
-			dr = dr - Lr*(np.sign(dr))
-		else:
-			dr = dr
-		return dr
-		
 
 	def zoning(self,sorted_traj,axis_range,direc="y"):
 		"""
@@ -683,7 +701,7 @@ class ReadLammpsTraj(object):
 		lz = box["zhi"]-box["zlo"]
 		# 1. load select atom position
 		xyzs = []
-		for i in tqdm(range(mframe,nframe,interval),desc="Reading positions"):
+		for i in tqdm(range(mframe,nframe+interval,interval),desc="Reading positions"):
 			iframe = self.read_traj(i)
 			xyz_i = select_atoms(iframe,atomtype).tolist()
 			xyzs.append(xyz_i)
@@ -717,6 +735,41 @@ class ReadLammpsTraj(object):
 		return tmsd
 
 
+	def dump_unwrap(self,mframe,nframe,interval=1,dumpfile=False):
+		"""
+		dump unwrap lammpstrj
+		Parameters:
+		- mframe: start number of frame
+		- nframe: end number of frame
+		- interval: interval of frame
+		- dumpfile: lammpstrj file name
+		"""
+		if dumpfile:
+			dumpfile = dumpfile
+		else:
+			dumpfile = f"unwrap_{mframe}_{nframe}.lammpstrj"
+		f = open(dumpfile,"w")
+		box = self.read_box(mframe)
+		lx = box["xhi"]-box["xlo"]
+		ly = box["yhi"]-box["ylo"]
+		lz = box["zhi"]-box["zlo"]
+		trajs = []
+		for i in tqdm(range(mframe,nframe+interval,interval),desc="Reading positions"):
+			traj = self.read_traj(i).values.tolist()
+			trajs.append(traj)
+		trajs = np.array(trajs)
+		# print(trajs.shape)
+		trajs[:,:,-3:] = unwrap_coordinates(trajs[:,:,-3:].astype(float), lx, ly, lz)
+		for i in tqdm(range(len(trajs)),desc="Unwrap positions"):
+			header = self.read_header(i)
+			header = "".join(header).strip()
+			traj = array2str(trajs[i]).strip()
+			f.write(header)
+			f.write("\n")
+			f.write(traj)
+			f.write("\n")
+		f.close()
+		return
 
 
 if __name__ == "__main__":
@@ -725,7 +778,8 @@ if __name__ == "__main__":
 	rlt = ReadLammpsTraj(lammpstrj)
 	traj = rlt.read_traj(0)
 	# traj = traj.sort_values(by="id",ascending=True)
-	print(traj)
+	# print(traj)
 	# ranges = rlt.dividing(1,10,1)
 	# print(ranges)
-	# rlt.msd(lammpstrj,atomtype=[1,2],mframe=0,nframe=3,interval=1,outputfile=False)
+	# rlt.msd(lammpstrj,atomtype=[1,2],mframe=0,nframe=20,interval=1,outputfile=False)
+	# rlt.dump_unwrap(mframe=0,nframe=20,interval=2)
