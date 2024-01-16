@@ -550,13 +550,13 @@ class ReadLammpsTraj(object):
 			id_know = self.atom
 		xc_n,yc_n,zc_n = [],[],[]
 		rho_n = [] #average density list in every bins
-		for xi in tqdm(range(Nx)):
+		for xi in range(Nx):
 			x0 = xlo+dX*xi #down coord of bin
 			x1 = xlo+dX*(xi+1) #down coord of bin
 			xc = (x0+x1)*0.5
 			xc_n.append(xc)
 			# print(xi,'---Nx:---',Nx)
-			for yi in range(Ny):
+			for yi in tqdm(range(Ny)):
 				# print(yi,'---Ny:---',Ny)
 				y0 = ylo+dY*yi #down coord of bin
 				y1 = ylo+dY*(yi+1) #down coord of bin
@@ -583,6 +583,7 @@ class ReadLammpsTraj(object):
 									# print(i,'---',self.natoms,MW[i])
 					vlo = (dX*dY*dZ)*unitconvert
 					rho = n/vlo
+					# print(rho)
 					rho_n.append(rho)
 
 		xc_n = np.array(xc_n)
@@ -594,7 +595,7 @@ class ReadLammpsTraj(object):
 		zc_n = np.array(zc_n)
 		zc_n = np.unique(zc_n).reshape((Nz,1))
 		rho_nxyz = np.array(rho_n).reshape((Nx,Ny,Nz))
-
+		# print(rho_nxyz)
 		minx = min(xc_n)
 		miny = min(yc_n)
 		minz = min(zc_n)
