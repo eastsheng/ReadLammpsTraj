@@ -90,6 +90,54 @@ def array2str(array):
 	
 	return string
 
+def unwrap_coordinates(xyzs, lxs, lys, lzs):
+	# Unwrap xyzs based on box vectors
+	nf, m, n = xyzs.shape
+	# for i in tqdm(range(1, nf),desc="Unwrap coordinates"):
+	for i in range(1, nf):
+		displacement = xyzs[i] - xyzs[i-1]
+		dVect = boundary(displacement,lxs[i],lys[i],lzs[i])
+		for j in range(n):
+			xyzs[i] = xyzs[i-1] + dVect
+	return xyzs
+
+def boundary(dVect, lx, ly, lz):
+	boundaries = np.array([lx, ly, lz]) * 0.5
+	dVect = np.where(dVect >= boundaries, dVect - boundaries * 2, np.where(dVect <= -boundaries, dVect + boundaries * 2, dVect))
+	# m, n = dVect.shape
+	# lx2 = lx/2
+	# ly2 = ly/2
+	# lz2 = lz/2
+	# for i in range(1,m):
+	# 	if dVect[i][0] > lx2:
+	# 		while dVect[i][0] > lx2:
+	# 			dVect[i][0] -= lx
+	# 	elif dVect[i][0] < -lx2:
+	# 		while dVect[i][0] < -lx2:
+	# 			dVect[i][0] += lx
+	
+	# 	if dVect[i][1] > lx2:
+	# 		while dVect[i][1] > ly2:
+	# 			dVect[i][1] -= ly
+	# 	elif dVect[i][1] < -ly2:
+	# 		while dVect[i][1] < -ly2:
+	# 			dVect[i][1] += ly
+	
+	# 	if dVect[i][2] > lz2:
+	# 		while dVect[i][2] > lz2:
+	# 			dVect[i][2] -= lz
+	# 	elif dVect[i][2] < -lz2:
+	# 		while dVect[i][2] < -lz2:
+	# 			dVect[i][2] += lz
+	
+	return dVect
+
+def select_atoms(iframe,atomtype):
+	condition = (iframe['type'].astype(int).isin(atomtype))
+	df_select = iframe[condition]
+	xyz = df_select[["x","y","z"]].values.astype(float)
+	return xyz
+
 
 class ReadLammpsTraj(object):
 	"""Read lammps trajectory file"""
@@ -325,6 +373,7 @@ class ReadLammpsTraj(object):
 		
 		return
 
+
 	def oneframe_alldensity(self,nframe,mxyz,Nbin,mass_dict=False,density_type="mass",direction="z"):
 		"""
 		calculating density of all atoms......
@@ -501,13 +550,13 @@ class ReadLammpsTraj(object):
 			id_know = self.atom
 		xc_n,yc_n,zc_n = [],[],[]
 		rho_n = [] #average density list in every bins
-		for xi in tqdm(range(Nx)):
+		for xi in range(Nx):
 			x0 = xlo+dX*xi #down coord of bin
 			x1 = xlo+dX*(xi+1) #down coord of bin
 			xc = (x0+x1)*0.5
 			xc_n.append(xc)
 			# print(xi,'---Nx:---',Nx)
-			for yi in range(Ny):
+			for yi in tqdm(range(Ny)):
 				# print(yi,'---Ny:---',Ny)
 				y0 = ylo+dY*yi #down coord of bin
 				y1 = ylo+dY*(yi+1) #down coord of bin
@@ -534,6 +583,7 @@ class ReadLammpsTraj(object):
 									# print(i,'---',self.natoms,MW[i])
 					vlo = (dX*dY*dZ)*unitconvert
 					rho = n/vlo
+					# print(rho)
 					rho_n.append(rho)
 
 		xc_n = np.array(xc_n)
@@ -545,7 +595,7 @@ class ReadLammpsTraj(object):
 		zc_n = np.array(zc_n)
 		zc_n = np.unique(zc_n).reshape((Nz,1))
 		rho_nxyz = np.array(rho_n).reshape((Nx,Ny,Nz))
-
+		# print(rho_nxyz)
 		minx = min(xc_n)
 		miny = min(yc_n)
 		minz = min(zc_n)
@@ -557,14 +607,6 @@ class ReadLammpsTraj(object):
 
 		return xc_n,yc_n,zc_n,rho_nxyz
 
-	def unwrap(self,dn,dm,Lr):
-		dr = dn-dm
-		if abs(dr) > 0.5*Lr:
-			dr = dr - Lr*(np.sign(dr))
-		else:
-			dr = dr
-		return dr
-		
 
 	def zoning(self,sorted_traj,axis_range,direc="y"):
 		"""
@@ -645,6 +687,172 @@ class ReadLammpsTraj(object):
 		return rho
 
 
+	@print_line
+	def msd(self,atomtype,mframe,nframe,interval,outputfile=False):
+		"""
+		calculating msd
+		Parameters:
+		- atomtype: atomtype, list, example: [1,2]
+		- mframe: start number of frame
+		- nframe: end number of frame
+		- interval: interval number of frame
+		- outputfile: msd file
+		"""
+		# trj = rlt.ReadLammpsTraj(trjfile)
+		# 1. load select atom position
+		xyzs = []
+		lxs,lys,lzs = [],[],[]
+		for i in tqdm(range(mframe,nframe+interval,interval),desc="Reading positions"):
+			iframe = self.read_traj(i)
+			xyz_i = select_atoms(iframe,atomtype).tolist()
+			xyzs.append(xyz_i)
+			box = self.read_box(i)
+			lx = box["xhi"]-box["xlo"]
+			ly = box["yhi"]-box["ylo"]
+			lz = box["zhi"]-box["zlo"]
+			lxs.append(lx)
+			lys.append(ly)
+			lzs.append(lz)
+		xyzs = np.array(xyzs)
+		# print(xyzs.shape)
+		xyzs = unwrap_coordinates(xyzs, lxs, lys, lzs)
+
+		nf, m, n=xyzs.shape
+		# 2. calculating msd
+		t = [0]
+		msd_x, msd_y, msd_z, msd = [0], [0], [0], [0]
+		lagtimes = np.arange(1, nf)
+		for i in tqdm(lagtimes,desc="Calculating MSD"):
+			dists = 0
+			disp = xyzs[:-i,:,:] - xyzs[i:,:,:]
+			# disp = boundary(disp,lx,ly,lz)
+			sqdist = np.square(disp)
+			dist = np.mean(sqdist,axis=0) # 平均lagtimes
+			dist = np.mean(dist,axis=0) # 平均原子
+			t.append(i*interval)
+			msd_x.append(dist[0])
+			msd_y.append(dist[1])
+			msd_z.append(dist[2])
+			msd.append(np.sum(dist))
+		tmsd = np.array([t,msd_x,msd_y,msd_z,msd]).T
+
+		if outputfile == False:
+			outputfile = "msd.dat"
+		np.savetxt(outputfile,tmsd,fmt="%f")
+		return tmsd
+
+
+	def dump_unwrap(self,mframe,nframe,interval=1,dumpfile=False):
+		"""
+		dump unwrap lammpstrj
+		Parameters:
+		- mframe: start number of frame
+		- nframe: end number of frame
+		- interval: interval of frame
+		- dumpfile: lammpstrj file name
+		"""
+		if dumpfile:
+			dumpfile = dumpfile
+		else:
+			dumpfile = f"unwrap_{mframe}_{nframe}.lammpstrj"
+		f = open(dumpfile,"w")
+		trajs = []
+		lxs,lys,lzs = [],[],[]
+		for i in tqdm(range(mframe,nframe+interval,interval),desc="Reading positions"):
+			traj = self.read_traj(i).values.tolist()
+			box = self.read_box(i)
+			lx = box["xhi"]-box["xlo"]
+			ly = box["yhi"]-box["ylo"]
+			lz = box["zhi"]-box["zlo"]
+			trajs.append(traj)
+			lxs.append(lx)
+			lys.append(ly)
+			lzs.append(lz)
+		trajs = np.array(trajs)
+		# print(trajs.shape)
+		trajs[:,:,-3:] = unwrap_coordinates(trajs[:,:,-3:].astype(float), lxs, lys, lzs)
+		for i in tqdm(range(len(trajs)),desc="Unwrap positions"):
+			header = self.read_header(i)
+			header = "".join(header).strip()
+			traj = array2str(trajs[i]).strip()
+			f.write(header)
+			f.write("\n")
+			f.write(traj)
+			f.write("\n")
+		f.close()
+		return
+
+	def rdf(self,mframe,nframe,interval,atomtype1,atomtype2,cutoff=12,Nb=120,rdffile=False):
+		"""
+		calculate rdf from lammpstrj
+		Parameters:
+		- mframe: start number of frame
+		- nframe: end number of frame
+		- interval: interval of frame
+		- atomtype1: selected atom type1, a list, example, [1,2]
+		- atomtype2: selected atom type2, a list, example, [1,2]
+		- cutoff: cutoff, default 12 Angstrom
+		- Nb: number of bins
+		- rdffile: lammpstrj file name
+		"""
+		if rdffile==False:
+			rdffile = "rdf.dat"
+		rgrs = []
+		for nf in range(mframe,nframe+1,interval):
+			traj = self.read_traj(nf)
+			box = self.read_box(nf)
+			lx = box["xhi"]-box["xlo"]
+			ly = box["yhi"]-box["ylo"]
+			lz = box["zhi"]-box["zlo"]
+			xyz_1 = select_atoms(traj,atomtype1)
+			xyz_2 = select_atoms(traj,atomtype2)
+			m, _ = xyz_1.shape
+			n, _ = xyz_2.shape
+			bs = cutoff/Nb
+			gr = np.zeros((Nb+1))
+			for i in tqdm(range(m),desc=f"Frame-{nf}"):
+				for j in range(n):
+					if i!=j:
+						dr = xyz_2[j]-xyz_1[i]
+						dr = boundary(dr, lx, ly, lz)
+						dist = np.linalg.norm(dr)
+						if dist <= cutoff+bs:
+							index_bin = int(np.ceil(dist/bs))-1
+							gr[index_bin] = gr[index_bin]+1
+
+			rho_all = n/(lx*ly*lz)
+
+			r = np.zeros((Nb+1))
+			for i in range(Nb+1):
+				dV = np.pi*(np.power(bs*(i+1),3)-np.power(bs*i,3))*4.0/3.0
+				gr[i] = gr[i]/m/dV
+				gr[i] = gr[i]/rho_all
+				r[i] = bs*(2*i+1)/2.0
+			rgr = np.vstack((r,gr)).T
+			rgrs.append(rgr.tolist())
+		rgrs = np.array(rgrs)
+		rgr_ave = np.mean(rgrs,axis=0)
+		np.savetxt(rdffile,rgr_ave,fmt="%f %f")
+		print(">>> RDF calculation successfully !")
+		return rho_all, rgr_ave
+
+	def calc_coordination_number(self,rho,r,gr):
+		"""
+		Applied the trapezoidal rule to integrate 
+		the RDF cumulatively and stores the CN function
+		Parameters:
+		- rho: number density
+		- r: radial distance
+		- gr: radial distribution functions (RDF)
+		return coordination number (cn)
+		"""
+		dr = r[1] - r[0]
+		cn = 4*np.pi*rho*np.cumsum(gr*r*r)*dr
+		return cn
+
+
+# import fastdataing as fd
+# import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
 	__print_version__()
@@ -655,3 +863,19 @@ if __name__ == "__main__":
 	# print(traj)
 	# ranges = rlt.dividing(1,10,1)
 	# print(ranges)
+	# rlt.msd(atomtype=[1,2],mframe=0,nframe=3,interval=1,outputfile=False)
+	# rlt.dump_unwrap(mframe=0,nframe=3,interval=1)
+	# rho_all, rgr = rlt.rdf( mframe=0,
+	# 						nframe=3,
+	# 						interval=1,
+	# 						atomtype1=[3],
+	# 						atomtype2=[3],
+	# 						cutoff=12,Nb=120,
+	# 						rdffile=False)
+	# fig = fd.add_fig()
+	# ax = fd.add_ax(fig)
+	# fd.plot_fig(ax,rgr[:,0],rgr[:,1])
+	# ax.axhline(y=1,color="c",linestyle="--")
+	# ax.set_xlim(0,)
+	# ax.set_ylim(0,)
+	# plt.show()
