@@ -850,6 +850,21 @@ class ReadLammpsTraj(object):
 		cn = 4*np.pi*rho*np.cumsum(gr*r*r)*dr
 		return cn
 
+	def calc_PMF(self,r,gr,T):
+		"""
+		Calculating the potential of mean force (PMF) by ln RDF
+		Parameters:
+		- r: radial distance
+		- gr: radial distribution functions (RDF)
+		- T: Temerature
+		return PMF
+		"""
+		# PMF = np.zeros((len(r)))
+		k = 1.380649e-23 # J/K
+		J2kcal = 2.390057361377e-4 # 1J/K = 2.390057361377e-4 kcal/K
+		PMF = -k*J2kcal*T*np.log(gr)
+		return PMF
+
 
 # import fastdataing as fd
 # import matplotlib.pyplot as plt
