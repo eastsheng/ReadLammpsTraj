@@ -832,7 +832,7 @@ class ReadLammpsTraj(object):
 			rgrs.append(rgr.tolist())
 		rgrs = np.array(rgrs)
 		rgr_ave = np.mean(rgrs,axis=0)
-		np.savetxt(rdffile,rgr_ave,fmt="%f %f")
+		np.savetxt(rdffile,rgr_ave,fmt="%f %e")
 		print(">>> RDF calculation successfully !")
 		return rho_all, rgr_ave
 
@@ -863,7 +863,8 @@ class ReadLammpsTraj(object):
 		k = 1.380649e-23 # J/K
 		J2kcal = 2.390057361377e-4 # 1J/K = 2.390057361377e-4 kcal/K
 		PMF = -k*J2kcal*T*np.log(gr)
-		return PMF
+		rPMF = np.vstack((r,PMF)).T
+		return rPMF
 
 
 # import fastdataing as fd
