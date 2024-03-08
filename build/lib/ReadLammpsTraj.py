@@ -866,6 +866,25 @@ class ReadLammpsTraj(object):
 		rPMF = np.vstack((r,PMF)).T
 		return rPMF
 
+	def density(self,nframe,id_range,mass_dict,Nz=100,id_type="atom",density_type="mass",direction="z"):
+		"""
+		Calculating the density
+		Parameters:
+		- nframe: number of frame
+		- id_range: calculated id range of atoms [1,2]
+		- mass_dict: masses dict
+		- Nz: number of bins
+		- id_type: "atoms" or "mol"
+		- density_type: "mass" or "number"
+		- direction: x, or y, or z
+		return coord, rho
+		"""
+		position = self.read_mxyz(nframe)
+		coord, rho = self.oneframe_moldensity(nframe,position,Nz,id_range,mass_dict,id_type=id_type,density_type=density_type,direction=direction)
+		
+		return coord, rho
+
+
 
 # import fastdataing as fd
 # import matplotlib.pyplot as plt
@@ -874,6 +893,8 @@ if __name__ == "__main__":
 	__print_version__()
 	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
 	rlt = ReadLammpsTraj(lammpstrj)
+	# coord, rho = rlt.density(nframe=1,id_range=[1,1],mass_dict={},)
+	# print(coord, rho)
 	# traj = rlt.read_traj(0)
 	# traj = traj.sort_values(by="id",ascending=True)
 	# print(traj)
