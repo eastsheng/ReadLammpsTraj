@@ -139,6 +139,39 @@ def select_atoms(iframe,atomtype):
 	return xyz
 
 
+def read_nframe(f):
+	"""
+	read the nframe info
+	Parameters:
+	- f: ave/chunk dump file
+	"""
+	with open(f,"r") as fo:
+		for i in range(4):
+			line = fo.readline()
+		temp = line.strip().split()
+		nbin = int(temp[1]) # Number-of-chunks
+		lines = fo.readlines()
+	nframe = int((len(lines)+1)/nbin) # dump number of frame
+	return nbin, nframe
+
+def average_avechunk(f):
+	"""
+	average the data of every nframes
+	Parameters:
+	- f: ave/chunk dump file
+	"""
+	nbin, nframe = read_nframe(f) # read the number of chunks and number of frames
+	data0 = np.loadtxt(f,skiprows=4,max_rows=nbin) # read first frame
+	sum_data = np.zeros_like(data0)
+	for i in tqdm(range(nframe)):
+		skip = 3 + (i + 1) + nbin * i
+		data = np.loadtxt(f,skiprows=skip,max_rows=nbin).astype(float)
+		sum_data += data
+	average_data = sum_data/nframe
+	return average_data
+
+
+
 class ReadLammpsTraj(object):
 	"""Read lammps trajectory file"""
 	def __init__(self,f):
@@ -883,38 +916,6 @@ class ReadLammpsTraj(object):
 		coord, rho = self.oneframe_moldensity(nframe,position,Nz,id_range,mass_dict,id_type=id_type,density_type=density_type,direction=direction)
 		
 		return coord, rho
-
-	def read_nframe(self,f):
-		"""
-		read the nframe info
-		Parameters:
-		- f: ave/chunk dump file
-		"""
-		with open(f,"r") as fo:
-			for i in range(4):
-				line = fo.readline()
-			temp = line.strip().split()
-			nbin = int(temp[1]) # Number-of-chunks
-			lines = fo.readlines()
-		nframe = int((len(lines)+1)/nbin) # dump number of frame
-		return nbin, nframe
-
-	def average_avechunk(self,f):
-		"""
-		average the data of every nframes
-		Parameters:
-		- f: ave/chunk dump file
-		"""
-		nbin, nframe = self.read_nframe(f) # read the number of chunks and number of frames
-		data0 = np.loadtxt(f,skiprows=4,max_rows=nbin) # read first frame
-		sum_data = np.zeros_like(data0)
-		for i in tqdm(range(nframe)):
-			skip = 3 + (i + 1) + nbin * i
-			data = np.loadtxt(f,skiprows=skip,max_rows=nbin).astype(float)
-			sum_data += data
-		average_rdf = sum_data/nframe
-		return average_rdf
-
 
 # import fastdataing as fd
 # import matplotlib.pyplot as plt
