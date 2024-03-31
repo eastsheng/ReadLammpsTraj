@@ -884,8 +884,6 @@ class ReadLammpsTraj(object):
 		
 		return coord, rho
 
-
-
 # import fastdataing as fd
 # import matplotlib.pyplot as plt
 
@@ -893,26 +891,3 @@ if __name__ == "__main__":
 	__print_version__()
 	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
 	rlt = ReadLammpsTraj(lammpstrj)
-	# coord, rho = rlt.density(nframe=1,id_range=[1,1],mass_dict={},)
-	# print(coord, rho)
-	# traj = rlt.read_traj(0)
-	# traj = traj.sort_values(by="id",ascending=True)
-	# print(traj)
-	# ranges = rlt.dividing(1,10,1)
-	# print(ranges)
-	# rlt.msd(atomtype=[1,2],mframe=0,nframe=3,interval=1,outputfile=False)
-	# rlt.dump_unwrap(mframe=0,nframe=3,interval=1)
-	# rho_all, rgr = rlt.rdf( mframe=0,
-	# 						nframe=3,
-	# 						interval=1,
-	# 						atomtype1=[3],
-	# 						atomtype2=[3],
-	# 						cutoff=12,Nb=120,
-	# 						rdffile=False)
-	# fig = fd.add_fig()
-	# ax = fd.add_ax(fig)
-	# fd.plot_fig(ax,rgr[:,0],rgr[:,1])
-	# ax.axhline(y=1,color="c",linestyle="--")
-	# ax.set_xlim(0,)
-	# ax.set_ylim(0,)
-	# plt.show()

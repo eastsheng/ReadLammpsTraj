@@ -884,6 +884,36 @@ class ReadLammpsTraj(object):
 		
 		return coord, rho
 
+	def read_nframe(self,f):
+		"""
+		read the nframe info
+		Parameters:
+		- f: ave/chunk dump file
+		"""
+		with open(f,"r") as fo:
+			for i in range(4):
+				line = fo.readline()
+			temp = line.strip().split()
+			nbin = int(temp[1]) # Number-of-chunks
+			lines = fo.readlines()
+		nframe = int((len(lines)+1)/nbin) # dump number of frame
+		return nbin, nframe
+
+	def average_avechunk(self,f):
+		"""
+		average the data of every nframes
+		Parameters:
+		- f: ave/chunk dump file
+		"""
+		nbin, nframe = self.read_nframe(f) # read the number of chunks and number of frames
+		data0 = np.loadtxt(f,skiprows=4,max_rows=nbin) # read first frame
+		sum_data = np.zeros_like(data0)
+		for i in tqdm(range(nframe)):
+			skip = 3 + (i + 1) + nbin * i
+			data = np.loadtxt(f,skiprows=skip,max_rows=nbin).astype(float)
+			sum_data += data
+		average_rdf = sum_data/nframe
+		return average_rdf
 
 
 # import fastdataing as fd
@@ -893,26 +923,3 @@ if __name__ == "__main__":
 	__print_version__()
 	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
 	rlt = ReadLammpsTraj(lammpstrj)
-	# coord, rho = rlt.density(nframe=1,id_range=[1,1],mass_dict={},)
-	# print(coord, rho)
-	# traj = rlt.read_traj(0)
-	# traj = traj.sort_values(by="id",ascending=True)
-	# print(traj)
-	# ranges = rlt.dividing(1,10,1)
-	# print(ranges)
-	# rlt.msd(atomtype=[1,2],mframe=0,nframe=3,interval=1,outputfile=False)
-	# rlt.dump_unwrap(mframe=0,nframe=3,interval=1)
-	# rho_all, rgr = rlt.rdf( mframe=0,
-	# 						nframe=3,
-	# 						interval=1,
-	# 						atomtype1=[3],
-	# 						atomtype2=[3],
-	# 						cutoff=12,Nb=120,
-	# 						rdffile=False)
-	# fig = fd.add_fig()
-	# ax = fd.add_ax(fig)
-	# fd.plot_fig(ax,rgr[:,0],rgr[:,1])
-	# ax.axhline(y=1,color="c",linestyle="--")
-	# ax.set_xlim(0,)
-	# ax.set_ylim(0,)
-	# plt.show()
