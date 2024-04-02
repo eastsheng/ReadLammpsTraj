@@ -154,19 +154,26 @@ def read_nframe(f):
 	nframe = int((len(lines)+1)/nbin) # dump number of frame
 	return nbin, nframe
 
-def average_avechunk(f,nframe=None):
+def average_avechunk(f,nframe=None,fr=None):
 	"""
 	average the data of every nframes
 	Parameters:
 	- f: ave/chunk dump file
 	- nframe: number of frame
+	- fr: frame range [1,10,1]
 	"""
 	nbin, nf = read_nframe(f) # read the number of chunks and number of frames
 	if nframe:
+		n0 = 0
 		nf = nframe
+		inter = 1
+	if fr:
+		n0 = fr[0]
+		nf = fr[1]
+		inter = fr[2]
 	data0 = np.loadtxt(f,skiprows=4,max_rows=nbin) # read first frame
 	sum_data = np.zeros_like(data0)
-	for i in tqdm(range(nf)):
+	for i in tqdm(range(n0,nf,inter)):
 		skip = 3 + (i + 1) + nbin * i
 		data = np.loadtxt(f,skiprows=skip,max_rows=nbin).astype(float)
 		sum_data += data
