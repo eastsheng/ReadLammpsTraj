@@ -167,17 +167,20 @@ def average_avechunk(f,nframe=None,fr=None):
 		n0 = 0
 		nf = nframe
 		inter = 1
-	if fr:
+	elif fr:
 		n0 = fr[0]
 		nf = fr[1]
 		inter = fr[2]
+	else:
+		n0 = 0
+		inter = 1
 	data0 = np.loadtxt(f,skiprows=4,max_rows=nbin) # read first frame
 	sum_data = np.zeros_like(data0)
 	for i in tqdm(range(n0,nf,inter)):
 		skip = 3 + (i + 1) + nbin * i
 		data = np.loadtxt(f,skiprows=skip,max_rows=nbin).astype(float)
 		sum_data += data
-	average_data = sum_data/nf
+	average_data = sum_data/((nf-n0)/inter)
 	return average_data
 
 
