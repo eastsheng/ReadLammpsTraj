@@ -160,7 +160,7 @@ def average_avechunk(f,nframe=None,fr=None):
 	Parameters:
 	- f: ave/chunk dump file
 	- nframe: number of frame
-	- fr: frame range [1,10,1]
+	- fr: frame range [start,stop] or [start,stop,interval]
 	"""
 	nbin, nf = read_nframe(f) # read the number of chunks and number of frames
 	if nframe:
@@ -170,7 +170,10 @@ def average_avechunk(f,nframe=None,fr=None):
 	elif fr:
 		n0 = fr[0]
 		nf = fr[1]
-		inter = fr[2]
+		try:
+			inter = fr[2]
+		except:
+			inter = 1
 	else:
 		n0 = 0
 		inter = 1
@@ -180,7 +183,7 @@ def average_avechunk(f,nframe=None,fr=None):
 		skip = 3 + (i + 1) + nbin * i
 		data = np.loadtxt(f,skiprows=skip,max_rows=nbin).astype(float)
 		sum_data += data
-	average_data = sum_data/((nf-n0)/inter)
+	average_data = sum_data/np.ceil((nf-n0)/inter)
 	return average_data
 
 
