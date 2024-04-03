@@ -151,7 +151,7 @@ def read_nframe(f):
 		temp = line.strip().split()
 		nbin = int(temp[1]) # Number-of-chunks
 		lines = fo.readlines()
-	nframe = int((len(lines)+1)/nbin) # dump number of frame
+	nframe = int((len(lines)+1)/(nbin+1)) # dump number of frame
 	return nbin, nframe
 
 def average_avechunk(f,nframe=None,fr=None):

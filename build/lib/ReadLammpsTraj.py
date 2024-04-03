@@ -151,7 +151,7 @@ def read_nframe(f):
 		temp = line.strip().split()
 		nbin = int(temp[1]) # Number-of-chunks
 		lines = fo.readlines()
-	nframe = int((len(lines)+1)/nbin) # dump number of frame
+	nframe = int((len(lines)+1)/(nbin+1)) # dump number of frame
 	return nbin, nframe
 
 def average_avechunk(f,nframe=None,fr=None):
@@ -182,6 +182,7 @@ def average_avechunk(f,nframe=None,fr=None):
 	for i in tqdm(range(n0,nf,inter)):
 		skip = 3 + (i + 1) + nbin * i
 		data = np.loadtxt(f,skiprows=skip,max_rows=nbin).astype(float)
+		# if data:
 		sum_data += data
 	average_data = sum_data/np.ceil((nf-n0)/inter)
 	return average_data
