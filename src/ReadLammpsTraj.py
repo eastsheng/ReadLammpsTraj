@@ -768,8 +768,8 @@ class ReadLammpsTraj(object):
 
 		nf, m, n=xyzs.shape
 		# 2. calculating msd
-		t = [0]
-		msd_x, msd_y, msd_z, msd = [0], [0], [0], [0]
+		t = []
+		msd_x, msd_y, msd_z, msd = [], [], [], []
 		lagtimes = np.arange(1, nf)
 		for i in tqdm(lagtimes,desc="Calculating MSD"):
 			dists = 0

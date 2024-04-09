@@ -182,7 +182,6 @@ def average_avechunk(f,nframe=None,fr=None):
 	for i in tqdm(range(n0,nf,inter)):
 		skip = 3 + (i + 1) + nbin * i
 		data = np.loadtxt(f,skiprows=skip,max_rows=nbin).astype(float)
-		# if data:
 		sum_data += data
 	average_data = sum_data/np.ceil((nf-n0)/inter)
 	return average_data
@@ -769,8 +768,8 @@ class ReadLammpsTraj(object):
 
 		nf, m, n=xyzs.shape
 		# 2. calculating msd
-		t = [0]
-		msd_x, msd_y, msd_z, msd = [0], [0], [0], [0]
+		t = []
+		msd_x, msd_y, msd_z, msd = [], [], [], []
 		lagtimes = np.arange(1, nf)
 		for i in tqdm(lagtimes,desc="Calculating MSD"):
 			dists = 0
