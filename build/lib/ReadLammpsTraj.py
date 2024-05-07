@@ -407,6 +407,7 @@ class ReadLammpsTraj(object):
 		mxyz = np.hstack((mass_array,xyz))
 		return mxyz
 
+	@print_line
 	def dump(self,nframe,dumpfile=False):
 		header = self.read_header(nframe)
 		traj = self.read_traj(nframe).values
@@ -422,7 +423,74 @@ class ReadLammpsTraj(object):
 		
 		return
 
+	@print_line
+	def dump_minish(self,mframe,nframe,interval=1,dumpfile=False):
+		"""
+		dump minish lammpstrj file
+		Parameters:
+		- mframe: start number of frame
+		- nframe: end number of frame
+		- interval: interval of frame
+		- dumpfile: lammpstrj file name
+		"""
+		if dumpfile:
+			dumpfile = dumpfile
+		else:
+			dumpfile = f"traj_{mframe}_{nframe}.lammpstrj"
+		f = open(dumpfile,"w")
+		for i in tqdm(range(mframe,nframe+interval,interval)):
+			traj = self.read_traj(i).values
+			header = self.read_header(i)
+			header = "".join(header).strip()
+			trajstr = array2str(traj).strip()
+			f.write(header)
+			f.write("\n")
+			f.write(trajstr)
+			f.write("\n")
+		f.close()
+		return
 
+	@print_line
+	def dump_unwrap(self,mframe,nframe,interval=1,dumpfile=False):
+		"""
+		dump unwrap lammpstrj
+		Parameters:
+		- mframe: start number of frame
+		- nframe: end number of frame
+		- interval: interval of frame
+		- dumpfile: lammpstrj file name
+		"""
+		if dumpfile:
+			dumpfile = dumpfile
+		else:
+			dumpfile = f"unwrap_{mframe}_{nframe}.lammpstrj"
+		f = open(dumpfile,"w")
+		trajs = []
+		lxs,lys,lzs = [],[],[]
+		for i in tqdm(range(mframe,nframe+interval,interval),desc="Reading positions"):
+			traj = self.read_traj(i).values.tolist()
+			box = self.read_box(i)
+			lx = box["xhi"]-box["xlo"]
+			ly = box["yhi"]-box["ylo"]
+			lz = box["zhi"]-box["zlo"]
+			trajs.append(traj)
+			lxs.append(lx)
+			lys.append(ly)
+			lzs.append(lz)
+		trajs = np.array(trajs)
+		# print(trajs.shape)
+		trajs[:,:,-3:] = unwrap_coordinates(trajs[:,:,-3:].astype(float), lxs, lys, lzs)
+		for i in tqdm(range(len(trajs)),desc="Unwrap positions"):
+			header = self.read_header(i)
+			header = "".join(header).strip()
+			traj = array2str(trajs[i]).strip()
+			f.write(header)
+			f.write("\n")
+			f.write(traj)
+			f.write("\n")
+		f.close()
+		return
+	@print_line
 	def oneframe_alldensity(self,nframe,mxyz,Nbin,mass_dict=False,density_type="mass",direction="z"):
 		"""
 		calculating density of all atoms......
@@ -489,7 +557,7 @@ class ReadLammpsTraj(object):
 		rho_n = np.array(rho_n).reshape(-1,1)
 
 		return lc_n,rho_n
-
+	@print_line
 	def oneframe_moldensity(self,nframe,mxyz,Nbin,id_range,mass_dict=False,id_type="mol",density_type="mass",direction="z"):
 		"""
 		calculating density of some molecules......
@@ -566,7 +634,7 @@ class ReadLammpsTraj(object):
 		lc_n = np.array(lc_n).reshape(-1,1)
 		rho_n = np.array(rho_n).reshape(-1,1)	
 		return lc_n,rho_n
-
+	@print_line
 	def TwoD_Density(self,nframe,mxyz,atomtype_n,Nx=1,Ny=1,Nz=1,mass_or_number="mass",id_type="mol"):
 		'''
 		nframe: n-th frame
@@ -719,7 +787,7 @@ class ReadLammpsTraj(object):
 		matrix = np.array([[nLs[i], nLs[i + 1]] for i in range(len(nLs) - 1)])
 		return matrix
 
-
+	@print_line
 	def calc_bulk_density(self, nframe, modify=False):
 		"""
 		calculate bulk mass density from lammpstrj
@@ -789,48 +857,7 @@ class ReadLammpsTraj(object):
 			outputfile = "msd.dat"
 		np.savetxt(outputfile,tmsd,fmt="%f")
 		return tmsd
-
-
-	def dump_unwrap(self,mframe,nframe,interval=1,dumpfile=False):
-		"""
-		dump unwrap lammpstrj
-		Parameters:
-		- mframe: start number of frame
-		- nframe: end number of frame
-		- interval: interval of frame
-		- dumpfile: lammpstrj file name
-		"""
-		if dumpfile:
-			dumpfile = dumpfile
-		else:
-			dumpfile = f"unwrap_{mframe}_{nframe}.lammpstrj"
-		f = open(dumpfile,"w")
-		trajs = []
-		lxs,lys,lzs = [],[],[]
-		for i in tqdm(range(mframe,nframe+interval,interval),desc="Reading positions"):
-			traj = self.read_traj(i).values.tolist()
-			box = self.read_box(i)
-			lx = box["xhi"]-box["xlo"]
-			ly = box["yhi"]-box["ylo"]
-			lz = box["zhi"]-box["zlo"]
-			trajs.append(traj)
-			lxs.append(lx)
-			lys.append(ly)
-			lzs.append(lz)
-		trajs = np.array(trajs)
-		# print(trajs.shape)
-		trajs[:,:,-3:] = unwrap_coordinates(trajs[:,:,-3:].astype(float), lxs, lys, lzs)
-		for i in tqdm(range(len(trajs)),desc="Unwrap positions"):
-			header = self.read_header(i)
-			header = "".join(header).strip()
-			traj = array2str(trajs[i]).strip()
-			f.write(header)
-			f.write("\n")
-			f.write(traj)
-			f.write("\n")
-		f.close()
-		return
-
+	@print_line
 	def rdf(self,mframe,nframe,interval,atomtype1,atomtype2,cutoff=12,Nb=120,rdffile=False):
 		"""
 		calculate rdf from lammpstrj
@@ -884,7 +911,7 @@ class ReadLammpsTraj(object):
 		np.savetxt(rdffile,rgr_ave,fmt="%f %e")
 		print(">>> RDF calculation successfully !")
 		return rho_all, rgr_ave
-
+	@print_line
 	def calc_coordination_number(self,rho,r,gr):
 		"""
 		Applied the trapezoidal rule to integrate 
@@ -898,7 +925,7 @@ class ReadLammpsTraj(object):
 		dr = r[1] - r[0]
 		cn = 4*np.pi*rho*np.cumsum(gr*r*r)*dr
 		return cn
-
+	@print_line
 	def calc_PMF(self,r,gr,T):
 		"""
 		Calculating the potential of mean force (PMF) by ln RDF
@@ -914,7 +941,7 @@ class ReadLammpsTraj(object):
 		PMF = -k*J2kcal*T*np.log(gr)
 		rPMF = np.vstack((r,PMF)).T
 		return rPMF
-
+	@print_line
 	def density(self,nframe,id_range,mass_dict,Nz=100,id_type="atom",density_type="mass",direction="z"):
 		"""
 		Calculating the density
