@@ -7,6 +7,7 @@ import datetime
 from itertools import islice
 import periodictable as pt
 import time
+import readlammpsdata as rld
 
 def __version__():
 	version = "1.2.3"
@@ -959,6 +960,43 @@ class ReadLammpsTraj(object):
 		coord, rho = self.oneframe_moldensity(nframe,position,Nz,id_range,mass_dict,id_type=id_type,density_type=density_type,direction=direction)
 		
 		return coord, rho
+
+
+	def trj2lmp(self,nframe,lmp,relmp):
+		"""
+		write lammps data from lammpstrj and original lmp
+		Parameters:
+		- nframe: number of frame
+		- lmp: original lammps data
+		- relmp: final writed lammps data
+		"""
+		traj = self.read_traj(nframe)
+		box = self.read_box(nframe)
+		Atoms_init = rld.read_data(lmp,"Atoms")
+		Atoms_init = rld.str2array(Atoms_init)
+		Atoms_init = Atoms_init[Atoms_init[:,0].astype(int).argsort()]
+		Atoms_init[:,4] = traj["x"].values
+		Atoms_init[:,5] = traj["y"].values
+		Atoms_init[:,6] = traj["z"].values
+		Atoms_final = rld.array2str(Atoms_init)
+		terms = rld.read_terms(lmp)
+		f = open(relmp,"w")
+		header = rld.read_data(lmp,"Header")
+		header = rld.modify_header(header,hterm="xlo xhi",value=[box["xlo"],box["xhi"]])
+		header = rld.modify_header(header,hterm="ylo yhi",value=[box["ylo"],box["yhi"]])
+		header = rld.modify_header(header,hterm="zlo zhi",value=[box["zlo"],box["zhi"]])
+		f.write(header)
+		for term in terms:
+			if term == "Atoms":
+				terminfo = Atoms_final
+			else:
+				terminfo = rld.read_data(lmp,term)
+			f.write(term)
+			f.write(terminfo)
+		print(">>> Write lmp from lammpstrj successfully!")
+		return
+
+
 
 # import fastdataing as fd
 # import matplotlib.pyplot as plt
