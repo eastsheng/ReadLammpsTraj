@@ -7,6 +7,7 @@ import datetime
 from itertools import islice
 import periodictable as pt
 import time
+import functools
 import readlammpsdata as rld
 
 def __version__():
@@ -14,7 +15,7 @@ def __version__():
 	return version
 
 def print_line(func):
-	
+	@functools.wraps(func)
 	def wrapper(*args, **kwargs):
 		print(21*"-"," Program Start ",21*"-")
 		start_time = time.time()
