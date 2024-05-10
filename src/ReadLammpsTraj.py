@@ -9,6 +9,7 @@ import periodictable as pt
 import time
 import functools
 import readlammpsdata as rld
+import hbonds as hb
 
 def __version__():
 	version = "1.2.3"
@@ -962,7 +963,7 @@ class ReadLammpsTraj(object):
 		
 		return coord, rho
 
-
+	@print_line
 	def trj2lmp(self,nframe,lmp,relmp):
 		"""
 		write lammps data from lammpstrj and original lmp
@@ -996,8 +997,33 @@ class ReadLammpsTraj(object):
 			f.write(terminfo)
 		print(">>> Write lmp from lammpstrj successfully!")
 		return
-
-
+	@print_line
+	def count_hbonds(self,lammpstrj,frames,typeOfO=1,dist=3.5,angle=30):
+		"""
+		count hbonds of water molecules, O H H
+		Parameters:
+		- lammpstrj: lammpstrj file
+		- frames: range of frame, [start,end,interval]
+		- typeOfO: type id of O atom, default 1
+		- dist: distance  for hbonds, default 3.5 A
+		- angle: angle for hbonds, default 30 degree
+		"""
+		ts = []
+		nhbonds = []
+		mframe,nframe,interval = frames[0],frames[1],frames[2]
+		for i in tqdm(range(mframe,nframe,interval)):
+			traj = self.read_traj(nframe=i)
+			box = self.read_box(nframe=i)
+			hbonds = hb.calc_hbonds(i,traj,typeOfO,
+								lx=box["xhi"]-box["xlo"], 
+								ly=box["yhi"]-box["ylo"], 
+								lz=box["zhi"]-box["zlo"],
+								dist=dist, angle=angle)
+			ts.append(i)
+			nhbonds.append(hbonds[1])
+		tnhbonds = [ts,nhbonds]
+		tnhbonds = np.array([tnhbonds]).reshape(2,-1).T
+		return tnhbonds
 
 # import fastdataing as fd
 # import matplotlib.pyplot as plt
@@ -1005,4 +1031,15 @@ class ReadLammpsTraj(object):
 if __name__ == "__main__":
 	__print_version__()
 	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
+	frames = [0,3,1]
 	rlt = ReadLammpsTraj(lammpstrj)
+	data = rlt.count_hbonds(
+		lammpstrj,
+		frames,
+		typeOfO=1,
+		dist=3.5,angle=30)
+
+	print(data)
+	print(data.shape)
+
+

@@ -26,6 +26,6 @@ install_requires=required,
 url          = 'https://github.com/eastsheng/ReadLammpsTraj',
 description  = 'Read lammps dump trajectory.',
 long_description=long_description,
-long_description_content_type='text/markdown'
+long_description_content_type='text/markdown',
 )
 
