@@ -1,11 +1,9 @@
 # calculate h-bonds
 from water import Water
-# from water import Water
 from tqdm import tqdm
 from itertools import combinations
 import numpy as np
 import json
-# from ReadLammpsTraj import ReadLammpsTraj
 
 def boundary(dVect, lx, ly, lz):
 	boundaries = np.array([lx, ly, lz]) * 0.5
