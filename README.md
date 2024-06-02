@@ -9,6 +9,10 @@
   git clone https://github.com/eastsheng/ReadLammpsTraj
   cd ReadLammpsTraj
   pip install .
+  
+  # or
+  
+  pip install git+https://github.com/eastsheng/ReadLammpsTraj.git
   ```
 
 - pip
@@ -220,5 +224,4 @@ class ReadLammpsTraj(builtins.object)
 
 None
 ```
-
 
