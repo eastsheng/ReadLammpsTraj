@@ -1084,16 +1084,16 @@ import ReadLammpsTraj as RLTr
 
 if __name__ == "__main__":
 	__print_version__()
-	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
-	frames = [0,3,1]
-	rlt = RLTr.ReadLammpsTraj(lammpstrj)
-	data = rlt.count_hbonds(
-		lammpstrj,
-		frames,
-		typeOfO=1,
-		dist=3.5,angle=30)
+	# lammpstrj = "traj_npt_relax_260_1.lammpstrj"
+	# frames = [0,3,1]
+	# rlt = RLTr.ReadLammpsTraj(lammpstrj)
+	# data = rlt.count_hbonds(
+	# 	lammpstrj,
+	# 	frames,
+	# 	typeOfO=1,
+	# 	dist=3.5,angle=30)
 
-	print(data)
-	print(data.shape)
+	# print(data)
+	# print(data.shape)
 
 
