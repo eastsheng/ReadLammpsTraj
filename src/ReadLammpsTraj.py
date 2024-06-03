@@ -140,6 +140,12 @@ def select_atoms(iframe,atomtype):
 	xyz = df_select[["x","y","z"]].values.astype(float)
 	return xyz
 
+def select_atoms_return_idxyz(iframe,atomtype):
+	condition = (iframe['type'].astype(int).isin(atomtype))
+	df_select = iframe[condition]
+	idxyz = df_select[["id","x","y","z"]].values
+	return idxyz
+
 
 def read_nframe(f):
 	"""
@@ -1026,44 +1032,50 @@ class ReadLammpsTraj(object):
 		return tnhbonds
 
 
-	def adsorbedNum(self,mframe,nframe,interval=1,atomtype1=False,atomtype2=False,cutoff=6,savefile=False):
-		"""
-		count number of adsorbed molecules
-		Parameters:
-		- mframe: start
-		- nframe: stop
-		- interval: interval
-		- atomtype1: adsorber atom type 
-		- atomtype2: adsorbent atom type 
-		- cutoff: cutoff
-		- savefile: save file
-		"""
-		ts, nums = [], []
-		for nf in tqdm(range(mframe,nframe,interval)):
-			traj = self.read_traj(nf)
-			a1 = select_atoms(traj,atomtype1)
-			a2 = select_atoms(traj,atomtype2)
-			m,_ = a1.shape
-			n,_ = a2.shape
-			box = self.read_box(nf)
-			lx = box["xhi"]-box["xlo"]
-			ly = box["yhi"]-box["ylo"]
-			lz = box["zhi"]-box["zlo"]
-			num = 0
-			for i in range(m):
-				for j in range(n):
-					dr = a2[j]-a1[i]
-					dr = boundary(dr,lx,ly,lz)
-					dist = np.linalg.norm(dr)
-					if dist <= cutoff:
-						num += 1
-			ts.append(nf)
-			nums.append(num)
-		tsnums = np.array([ts,nums])
-		tsnums = np.vstack((tsnums)).T
-		np.savetxt(savefile,tsnums,fmt="%d")
+def adsorbedNum(mframe,nframe,interval=1,atomtype1=False,atomtype2=False,cutoff=6,savefile=False):
+	"""
+	count number of adsorbed molecules
+	Parameters:
+	- mframe: start
+	- nframe: stop
+	- interval: interval
+	- atomtype1: adsorber atom type 
+	- atomtype2: adsorbent atom type 
+	- cutoff: cutoff
+	- savefile: save file
+	"""
+	ts, nums = [], []
+	for nf in tqdm(range(mframe,nframe,interval)):
+		traj = self.read_traj(nf)
+		idxyz1 = select_atoms_return_idxyz(traj,atomtype1)
+		idxyz2 = select_atoms_return_idxyz(traj,atomtype2)
+		a1 = idxyz1[:,1:].astype(float)
+		a2 = idxyz2[:,1:].astype(float)
+		id2 = idxyz2[:,0].astype(int)
+		m,_ = a1.shape
+		n,_ = a2.shape
+		box = self.read_box(nf)
+		lx = box["xhi"]-box["xlo"]
+		ly = box["yhi"]-box["ylo"]
+		lz = box["zhi"]-box["zlo"]
+		adsorbs = []
+		for i in range(m):
+			for j in range(n):
+				dr = a2[j]-a1[i]
+				dr = boundary(dr,lx,ly,lz)
+				dist = np.linalg.norm(dr)
+				if dist <= cutoff:
+					adsorbs.append(id2[j])
+		adsorbs = np.unique(np.array(adsorbs))
+		num = len(adsorbs)
 
-		return
+		ts.append(nf)
+		nums.append(num)
+	tsnums = np.array([ts,nums])
+	tsnums = np.vstack((tsnums)).T
+	np.savetxt(savefile,tsnums,fmt="%d")
+
+	return
 
 
 # import fastdataing as fd
