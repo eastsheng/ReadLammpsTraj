@@ -1013,7 +1013,7 @@ class ReadLammpsTraj(object):
 		- dist: distance  for hbonds, default 3.5 A
 		- angle: angle for hbonds, default 30 degree
 		"""
-		import hbonds as hb
+		import utils.hbonds as hb
 		ts = []
 		nhbonds = []
 		mframe,nframe,interval = frames[0],frames[1],frames[2]
@@ -1080,19 +1080,20 @@ def adsorbedNum(mframe,nframe,interval=1,atomtype1=False,atomtype2=False,cutoff=
 
 # import fastdataing as fd
 # import matplotlib.pyplot as plt
+import ReadLammpsTraj as RLTr
 
 if __name__ == "__main__":
 	__print_version__()
 	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
 	frames = [0,3,1]
-	# rlt = ReadLammpsTraj(lammpstrj)
-	# data = rlt.count_hbonds(
-	# 	lammpstrj,
-	# 	frames,
-	# 	typeOfO=1,
-	# 	dist=3.5,angle=30)
+	rlt = RLTr.ReadLammpsTraj(lammpstrj)
+	data = rlt.count_hbonds(
+		lammpstrj,
+		frames,
+		typeOfO=1,
+		dist=3.5,angle=30)
 
-	# print(data)
-	# print(data.shape)
+	print(data)
+	print(data.shape)
 
 
