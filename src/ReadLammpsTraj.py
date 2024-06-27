@@ -2,6 +2,7 @@
 # id mol type mass x y z vx vy vz fx fy fz q
 import numpy as np 
 import pandas as pd
+from scipy.integrate import simps, trapezoid
 from tqdm import tqdm
 import datetime
 from itertools import islice
@@ -949,6 +950,50 @@ class ReadLammpsTraj(object):
 		PMF = -k*J2kcal*T*np.log(gr)
 		rPMF = np.vstack((r,PMF)).T
 		return rPMF
+
+	def structureFactor(self,lammpstrj,frames,atomtype1,atomtype2,cutoff=12,Nb=120,kmin=False,kmax=5,nk=500,rdffile=False,skfile=False):
+		"""
+		calculating the structure factor from RDF
+		Parameters:
+		- lammpstrj: lammpstraj file
+		- frames: range of frame, [start,stop,interval]
+		- atomtype1: selected atom type1, a list, example, [1,2]
+		- atomtype2: selected atom type2, a list, example, [1,2]
+		- cutoff: cutoff, default 12 Angstrom
+		- Nb: number of bins
+		- kmin: minimum value of vector k
+		- kmin: maximum value of vector k
+		- nk: number of vector k
+		- rdffile: saved rdf file
+		- skfile:  saved sk file
+		"""
+		mframe,nframe,interval = frames[0],frames[1],frames[2]
+		# rlt = ReadLammpsTraj(lammpstrj)
+		rho, rgr_ave = self.rdf(mframe,nframe,interval,atomtype1,atomtype2,cutoff=cutoff,Nb=Nb,rdffile=rdffile)
+		r, gr = rgr_ave[:,0], rgr_ave[:,1]
+
+		if kmin:
+			pass
+		else:
+			lx,ly,lz = self.read_lengths(mframe)
+			# ll = (lx + ly +lz)/3.0
+			ll = lx 
+			kmin = 2*np.pi/ll
+
+		k_vals = np.linspace(kmin,kmax,nk)
+		dr = r[1]-r[0]
+		Sk = []
+		for k in k_vals:
+			integrand = (gr - 1) * (np.sin(k * r) / (k * r)) * 4 * np.pi * r**2
+			Sk_val = 1 + rho * simps(integrand, dx=dr)
+			Sk.append(Sk_val)
+		Sk = np.array(Sk)
+		kSk = np.vstack((k_vals,Sk)).T
+		np.savetxt(skfile,kSk,"%f")
+		return kSk
+
+
+
 	@print_line
 	def density(self,nframe,id_range,mass_dict,Nz=100,id_type="atom",density_type="mass",direction="z"):
 		"""
@@ -1032,61 +1077,60 @@ class ReadLammpsTraj(object):
 		return tnhbonds
 
 
-def adsorbedNum(mframe,nframe,interval=1,atomtype1=False,atomtype2=False,cutoff=6,savefile=False):
-	"""
-	count number of adsorbed molecules
-	Parameters:
-	- mframe: start
-	- nframe: stop
-	- interval: interval
-	- atomtype1: adsorber atom type 
-	- atomtype2: adsorbent atom type 
-	- cutoff: cutoff
-	- savefile: save file
-	"""
-	ts, nums = [], []
-	for nf in tqdm(range(mframe,nframe,interval)):
-		traj = self.read_traj(nf)
-		idxyz1 = select_atoms_return_idxyz(traj,atomtype1)
-		idxyz2 = select_atoms_return_idxyz(traj,atomtype2)
-		a1 = idxyz1[:,1:].astype(float)
-		a2 = idxyz2[:,1:].astype(float)
-		id2 = idxyz2[:,0].astype(int)
-		m,_ = a1.shape
-		n,_ = a2.shape
-		box = self.read_box(nf)
-		lx = box["xhi"]-box["xlo"]
-		ly = box["yhi"]-box["ylo"]
-		lz = box["zhi"]-box["zlo"]
-		adsorbs = []
-		for i in range(m):
-			for j in range(n):
-				dr = a2[j]-a1[i]
-				dr = boundary(dr,lx,ly,lz)
-				dist = np.linalg.norm(dr)
-				if dist <= cutoff:
-					adsorbs.append(id2[j])
-		adsorbs = np.unique(np.array(adsorbs))
-		num = len(adsorbs)
+	def adsorbedNum(self,mframe,nframe,interval=1,atomtype1=False,atomtype2=False,cutoff=6,savefile=False):
+		"""
+		count number of adsorbed molecules
+		Parameters:
+		- mframe: start
+		- nframe: stop
+		- interval: interval
+		- atomtype1: adsorber atom type 
+		- atomtype2: adsorbent atom type 
+		- cutoff: cutoff
+		- savefile: save file
+		"""
+		ts, nums = [], []
+		for nf in tqdm(range(mframe,nframe,interval)):
+			traj = self.read_traj(nf)
+			idxyz1 = select_atoms_return_idxyz(traj,atomtype1)
+			idxyz2 = select_atoms_return_idxyz(traj,atomtype2)
+			a1 = idxyz1[:,1:].astype(float)
+			a2 = idxyz2[:,1:].astype(float)
+			id2 = idxyz2[:,0].astype(int)
+			m,_ = a1.shape
+			n,_ = a2.shape
+			box = self.read_box(nf)
+			lx = box["xhi"]-box["xlo"]
+			ly = box["yhi"]-box["ylo"]
+			lz = box["zhi"]-box["zlo"]
+			adsorbs = []
+			for i in range(m):
+				for j in range(n):
+					dr = a2[j]-a1[i]
+					dr = boundary(dr,lx,ly,lz)
+					dist = np.linalg.norm(dr)
+					if dist <= cutoff:
+						adsorbs.append(id2[j])
+			adsorbs = np.unique(np.array(adsorbs))
+			num = len(adsorbs)
 
-		ts.append(nf)
-		nums.append(num)
-	tsnums = np.array([ts,nums])
-	tsnums = np.vstack((tsnums)).T
-	np.savetxt(savefile,tsnums,fmt="%d")
+			ts.append(nf)
+			nums.append(num)
+		tsnums = np.array([ts,nums])
+		tsnums = np.vstack((tsnums)).T
+		np.savetxt(savefile,tsnums,fmt="%d")
 
-	return
+		return
 
 
 # import fastdataing as fd
 # import matplotlib.pyplot as plt
-import ReadLammpsTraj as RLTr
 
 if __name__ == "__main__":
 	__print_version__()
 	# lammpstrj = "traj_npt_relax_260_1.lammpstrj"
 	# frames = [0,3,1]
-	# rlt = RLTr.ReadLammpsTraj(lammpstrj)
+	# rlt = ReadLammpsTraj(lammpstrj)
 	# data = rlt.count_hbonds(
 	# 	lammpstrj,
 	# 	frames,
