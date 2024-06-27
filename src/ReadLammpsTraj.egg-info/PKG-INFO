@@ -12,6 +12,7 @@ Requires-Dist: pandas>=2.0.3
 Requires-Dist: tqdm>=4.66.1
 Requires-Dist: periodictable>=1.6.1
 Requires-Dist: readlammpsdata>=1.0.9
+Requires-Dist: scipy>=1.13.1
 
 ## ReadLammpsTraj
 - Read lammps dump trajectory
