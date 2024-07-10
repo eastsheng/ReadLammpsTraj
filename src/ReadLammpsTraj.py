@@ -948,6 +948,7 @@ class ReadLammpsTraj(object):
 		k = 1.380649e-23 # J/K
 		J2kcal = 2.390057361377e-4 # 1J/K = 2.390057361377e-4 kcal/K
 		PMF = -k*J2kcal*T*np.log(gr)
+
 		rPMF = np.vstack((r,PMF)).T
 		return rPMF
 
