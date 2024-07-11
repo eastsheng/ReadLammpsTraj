@@ -917,7 +917,7 @@ class ReadLammpsTraj(object):
 			rgrs.append(rgr.tolist())
 		rgrs = np.array(rgrs)
 		rgr_ave = np.mean(rgrs,axis=0)
-		np.savetxt(rdffile,rgr_ave,fmt="%f %e")
+		np.savetxt(rdffile,rgr_ave,fmt="%f %e",header=str(rho_all), comments='# ')
 		print(">>> RDF calculation successfully !")
 		return rho_all, rgr_ave
 	@print_line
