@@ -12,7 +12,7 @@ import functools
 import readlammpsdata as rld
 
 def __version__():
-	version = "1.2.3"
+	version = "1.2.4"
 	return version
 
 def print_line(func):
@@ -975,33 +975,69 @@ class ReadLammpsTraj(object):
 		rPMF = np.vstack((r,PMF)).T
 		return rPMF
 
-	def structureFactor(self,lammpstrj,frames,atomtype1,atomtype2,cutoff=12,Nb=120,kmin=False,kmax=5,nk=500,rdffile=False,skfile=False):
+	# def structureFactor(self,lammpstrj,frames,atomtype1,atomtype2,cutoff=12,Nb=120,kmin=False,kmax=5,nk=500,rdffile=False,skfile=False):
+	# 	"""
+	# 	calculating the structure factor from RDF
+	# 	Parameters:
+	# 	- lammpstrj: lammpstraj file
+	# 	- frames: range of frame, [start,stop,interval]
+	# 	- atomtype1: selected atom type1, a list, example, [1,2]
+	# 	- atomtype2: selected atom type2, a list, example, [1,2]
+	# 	- cutoff: cutoff, default 12 Angstrom
+	# 	- Nb: number of bins
+	# 	- kmin: minimum value of vector k
+	# 	- kmin: maximum value of vector k
+	# 	- nk: number of vector k
+	# 	- rdffile: saved rdf file
+	# 	- skfile:  saved sk file
+	# 	"""
+	# 	mframe,nframe,interval = frames[0],frames[1],frames[2]
+	# 	# rlt = ReadLammpsTraj(lammpstrj)
+	# 	rho, rgr_ave = self.rdf(mframe,nframe,interval,atomtype1,atomtype2,cutoff=cutoff,Nb=Nb,rdffile=rdffile)
+	# 	r, gr = rgr_ave[:,0], rgr_ave[:,1]
+
+	# 	if kmin:
+	# 		pass
+	# 	else:
+	# 		lx,ly,lz = self.read_lengths(mframe)
+	# 		# ll = (lx + ly +lz)/3.0
+	# 		ll = lx 
+	# 		kmin = 2*np.pi/ll
+
+	# 	k_vals = np.linspace(kmin,kmax,nk)
+	# 	dr = r[1]-r[0]
+	# 	Sk = []
+	# 	for k in k_vals:
+	# 		integrand = (gr - 1) * (np.sin(k * r) / (k * r)) * 4 * np.pi * r**2
+	# 		Sk_val = 1 + rho * simps(integrand, dx=dr)
+	# 		Sk.append(Sk_val)
+	# 	Sk = np.array(Sk)
+	# 	kSk = np.vstack((k_vals,Sk)).T
+	# 	np.savetxt(skfile,kSk,"%f")
+	# 	return kSk
+
+
+	def structureFactor(self,rho,rgr,frames,kmin=False,kmax=5,nk=500,skfile=False):
 		"""
 		calculating the structure factor from RDF
 		Parameters:
-		- lammpstrj: lammpstraj file
+		- rho: number density
+		- rgr: rdf
 		- frames: range of frame, [start,stop,interval]
-		- atomtype1: selected atom type1, a list, example, [1,2]
-		- atomtype2: selected atom type2, a list, example, [1,2]
-		- cutoff: cutoff, default 12 Angstrom
-		- Nb: number of bins
 		- kmin: minimum value of vector k
 		- kmin: maximum value of vector k
 		- nk: number of vector k
-		- rdffile: saved rdf file
 		- skfile:  saved sk file
 		"""
 		mframe,nframe,interval = frames[0],frames[1],frames[2]
-		# rlt = ReadLammpsTraj(lammpstrj)
-		rho, rgr_ave = self.rdf(mframe,nframe,interval,atomtype1,atomtype2,cutoff=cutoff,Nb=Nb,rdffile=rdffile)
-		r, gr = rgr_ave[:,0], rgr_ave[:,1]
+		r, gr = rgr[:,0], rgr[:,1]
 
 		if kmin:
 			pass
 		else:
 			lx,ly,lz = self.read_lengths(mframe)
 			# ll = (lx + ly +lz)/3.0
-			ll = lx 
+			ll = min([lx,ly,lz])
 			kmin = 2*np.pi/ll
 
 		k_vals = np.linspace(kmin,kmax,nk)
@@ -1015,8 +1051,6 @@ class ReadLammpsTraj(object):
 		kSk = np.vstack((k_vals,Sk)).T
 		np.savetxt(skfile,kSk,"%f")
 		return kSk
-
-
 
 	@print_line
 	def density(self,nframe,id_range,mass_dict,Nz=100,id_type="atom",density_type="mass",direction="z"):
@@ -1147,21 +1181,34 @@ class ReadLammpsTraj(object):
 		return
 
 
-# import fastdataing as fd
-# import matplotlib.pyplot as plt
+import fastdataing as fd
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
 	__print_version__()
-	# lammpstrj = "traj_npt_relax_260_1.lammpstrj"
-	# frames = [0,3,1]
-	# rlt = ReadLammpsTraj(lammpstrj)
-	# data = rlt.count_hbonds(
-	# 	lammpstrj,
-	# 	frames,
-	# 	typeOfO=1,
-	# 	dist=3.5,angle=30)
+	lammpstrj = "traj_npt_relax_260_1.lammpstrj"
+	frames = [0,3,1]
+	rlt = ReadLammpsTraj(lammpstrj)
 
-	# print(data)
-	# print(data.shape)
+	rho_all, rgr = rlt.rdf(mframe=0,nframe=1,interval=1,
+							atomtype1=[3],atomtype2=[3],
+							cutoff=12,Nb=100,
+							rdffile="rdf.dat")
+	rlt.structureFactor(rho_all,rgr,frames=frames,
+		kmin=False,kmax=10,nk=500,skfile="sk.dat")
+	ksk = np.loadtxt("sk.dat")
+	r, gr = rgr[:,0]*0.1,rgr[:,1]
+	k, sk = ksk[:,0]*0.1,ksk[:,1]
+	fig=fd.add_fig()
+	ax = fd.add_ax(fig,subplot=(2,1,1))
+	ay = fd.add_ax(fig,subplot=(2,1,2))
+	ax.plot(r,gr,lw = 2)
+	ay.plot(k,sk,lw = 2)
 
-
+	ax.set_xlabel(r"$\regular \it r$ (Å)",fontsize=22)
+	ax.set_ylabel(r"$\regular \it g(r)$",fontsize=22)
+	ay.set_xlabel(r"$\regular \it k$  ($Å^{-1}$)",fontsize=22)
+	ay.set_ylabel(r"$\regular \it S(k)$",fontsize=22)
+	fd.set_fig(ax)
+	fd.set_fig(ay)
+	plt.show()
