@@ -153,7 +153,6 @@ def select_atoms_return_idxyz(iframe,atomtype):
 	- atomtype, a dict
 	"""
 	key = list(atomtype.keys())[0]
-	print(key)
 	if key == "atom_id":
 		condition = (iframe['id'].astype(int).isin(atomtype[key]))
 		df_select = iframe[condition]
