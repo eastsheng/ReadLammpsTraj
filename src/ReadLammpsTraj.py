@@ -141,9 +141,29 @@ def select_atoms(iframe,atomtype):
 	xyz = df_select[["x","y","z"]].values.astype(float)
 	return xyz
 
+# def select_atoms_return_idxyz(iframe,atomtype):
+# 	condition = (iframe['type'].astype(int).isin(atomtype))
+# 	df_select = iframe[condition]
+# 	idxyz = df_select[["id","x","y","z"]].values
+# 	return idxyz
+
 def select_atoms_return_idxyz(iframe,atomtype):
-	condition = (iframe['type'].astype(int).isin(atomtype))
-	df_select = iframe[condition]
+	"""
+	- iframe, a dataframe
+	- atomtype, a dict
+	"""
+	key = list(atomtype.keys())[0]
+	print(key)
+	if key == "atom_id":
+		condition = (iframe['id'].astype(int).isin(atomtype[key]))
+		df_select = iframe[condition]
+
+	elif key == "atom_type":
+		condition = (iframe['type'].astype(int).isin(atomtype[key]))
+		df_select = iframe[condition]
+	else:
+		pass
+		print(">>> Warning: your key is error!!!")
 	idxyz = df_select[["id","x","y","z"]].values
 	return idxyz
 
@@ -1155,8 +1175,8 @@ class ReadLammpsTraj(object):
 		- mframe: start
 		- nframe: stop
 		- interval: interval
-		- atomtype1: adsorber atom type 
-		- atomtype2: adsorbent atom type 
+		- atomtype1: adsorber atom type/id, a dict, atomtype1={"atom_id":[7]} 
+		- atomtype2: adsorbent atom type/id, a dict, atomtype2={"atom_type": [3]}
 		- cutoff: cutoff
 		- savefile: save file
 		"""
