@@ -272,7 +272,8 @@ class ReadLammpsTraj(object):
 		nframe: number of frame 
 		"""
 		skip = 9*(nframe+1)+self.natoms*(nframe)
-		traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.natoms,dtype="str")
+		# traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.natoms,dtype="str")
+		traj = np.genfromtxt(self.f,skip_header=skip,max_rows=self.natoms,dtype="str")
 		traj = pd.DataFrame(traj,columns=self.col)
 		traj["id"] = pd.to_numeric(traj["id"],errors='coerce').astype("Int64")
 		traj = traj.sort_values(by="id")
