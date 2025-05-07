@@ -1130,7 +1130,7 @@ class ReadLammpsTraj(object):
 		header = rld.modify_header(header,hterm="zlo zhi",value=[box["zlo"],box["zhi"]])
 		f.write(header)
 		for term in terms:
-			if term == "Atoms":
+			if "Atoms" in term:
 				terminfo = Atoms_final
 			else:
 				terminfo = rld.read_data(lmp,term)
@@ -1138,6 +1138,7 @@ class ReadLammpsTraj(object):
 			f.write(terminfo)
 		print(">>> Write lmp from lammpstrj successfully!")
 		return
+	
 	@print_line
 	def count_hbonds(self,lammpstrj,frames,typeOfO=1,dist=3.5,angle=30):
 		"""
