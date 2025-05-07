@@ -272,7 +272,8 @@ class ReadLammpsTraj(object):
 		nframe: number of frame 
 		"""
 		skip = 9*(nframe+1)+self.natoms*(nframe)
-		traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.natoms,dtype="str")
+		# traj = np.loadtxt(self.f,skiprows=skip,max_rows=self.natoms,dtype="str")
+		traj = np.genfromtxt(self.f,skip_header=skip,max_rows=self.natoms,dtype="str")
 		traj = pd.DataFrame(traj,columns=self.col)
 		traj["id"] = pd.to_numeric(traj["id"],errors='coerce').astype("Int64")
 		traj = traj.sort_values(by="id")
@@ -1211,6 +1212,50 @@ class ReadLammpsTraj(object):
 		np.savetxt(savefile,tsnums,fmt="%d")
 
 		return
+
+	def center_of_mass(self,atomtype,mframe,nframe,interval=1,outputfile=False):
+		t, comxs,comys,comzs,coms = [], [], [], [], []
+		for i in tqdm(range(mframe,nframe+1)):
+			trj = self.read_traj(i)
+			mask = (trj['type'].astype(int) >= atomtype[0]) & (trj['type'].astype(int) <= atomtype[1])
+			new_df = trj[mask].copy()
+			elements = new_df["element"].values
+			masses = np.array(element2mass(elements))
+			total_mass = np.sum(masses)
+			
+			x = new_df["x"].values.astype(float)
+			comx_sum = np.sum(masses * x)
+			comx = comx_sum / total_mass
+			
+			y = new_df["y"].values.astype(float)
+			comy_sum = np.sum(masses * y)
+			comy = comy_sum / total_mass
+			
+			z = new_df["z"].values.astype(float)
+			comz_sum = np.sum(masses * z)
+			comz = comz_sum / total_mass
+			t.append(i)
+			comxs.append(comx)
+			comys.append(comy)
+			comzs.append(comz)
+			com = np.linalg.norm([comx,comy,comz])
+			coms.append(com)
+		t = np.array(t)
+		comxs = np.array(comxs)
+		comys = np.array(comys)
+		comzs = np.array(comzs)
+		coms = np.array(coms)
+		tcoms = np.column_stack((t, comxs, comys, comzs, coms))
+		np.savetxt(outputfile,tcoms,"%f",header='Time (frame) com_x com_y com_z com_ave', comments='# ')
+		return
+
+
+
+
+
+
+
+
 
 
 import fastdataing as fd
